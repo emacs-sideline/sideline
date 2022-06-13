@@ -74,6 +74,11 @@
   :type 'string
   :group 'sideline)
 
+(defcustom sideline-priority 100
+  "Overlays' priority."
+  :type 'integer
+  :group 'sideline)
+
 (defvar-local sideline--overlays nil
   "Displayed overlays.")
 
@@ -161,22 +166,25 @@ If argument ON-LEFT is non-nil, we calculate to the left side.  Otherwise,
 calculate to the right side."
   (if on-left
       (let ((column-start (window-hscroll))
-            (pos-first (save-excursion (back-to-indentation) (current-column))))
-        (when (< str-len (- pos-first column-start))
-          (cons pos-first column-start)))
+            (pos-first (save-excursion (back-to-indentation) (current-column)))
+            (pos-end (save-excursion (move-end-of-line nil) (current-column))))
+        (cond ((< str-len (- pos-first column-start))
+               (cons column-start pos-first))
+              ((= pos-first pos-end)
+               (cons column-start (sideline--window-width)))))
     (let* ((column-start (window-hscroll))
            (column-end (+ column-start (sideline--window-width)))
            (pos-end (save-excursion (move-end-of-line nil) (current-column))))
       (when (< str-len (- column-end pos-end))
         (cons column-end pos-end)))))
 
-(defun sideline--find-line (str-len on-left)
+(defun sideline--find-line (str-len on-left &optional direction)
   "Find a line where the string can be inserted."
   (let ((inhibit-field-text-motion t)
         (bol (window-start)) (eol (window-end))
         (occupied-lines (if on-left sideline--occupied-lines-left
                           sideline--occupied-lines-right))
-        (going-up (eq sideline--find-direction 'up))
+        (going-up (eq direction 'up))
         (skip-first t)
         (break-it)
         (pos-ov))
@@ -194,7 +202,8 @@ calculate to the right side."
     (if on-left
         (setq sideline--occupied-lines-left occupied-lines)
       (setq sideline--occupied-lines-right occupied-lines))
-    pos-ov))
+    (or pos-ov
+        (sideline--find-line str-len on-left (if going-up 'down 'up)))))
 
 ;;
 ;; (@* "Overlays" )
@@ -225,12 +234,13 @@ calculate to the right side."
        (string (concat
                 (propertize " " 'display `(space :align-to (- ,align ,(sideline--align len margin))))
                 (propertize title 'display (sideline--compute-height))))
-       (pos-ov (sideline--find-line (1+ (length title)) on-left))
+       (pos-ov (sideline--find-line (1+ (length title)) on-left sideline--find-direction))
        (ov (make-overlay (car pos-ov) (car pos-ov) nil t t)))
-    (overlay-put ov 'after-string string)
+    (overlay-put ov 'before-string string)
     (overlay-put ov 'intangible t)
     (overlay-put ov 'position (car pos-ov))
     (overlay-put ov 'window (get-buffer-window))
+    (overlay-put ov 'priority sideline-priority)
     (push ov sideline--overlays)))
 
 ;;
