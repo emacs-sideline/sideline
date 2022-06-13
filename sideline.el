@@ -64,14 +64,9 @@
   "Face used to highlight action text."
   :group 'sideline)
 
-(defcustom sideline-backends-skip-current-line nil
+(defcustom sideline-backends-skip-current-line t
   "Don't display at line."
   :type 'boolean
-  :group 'sideline)
-
-(defcustom sideline-format "   %s"
-  "Format entire candidate string."
-  :type 'string
   :group 'sideline)
 
 (defcustom sideline-priority 100
@@ -167,21 +162,20 @@ calculate to the right side."
   (if on-left
       (let ((column-start (window-hscroll))
             (pos-first (save-excursion (back-to-indentation) (current-column)))
-            (pos-end (save-excursion (move-end-of-line nil) (current-column))))
+            (pos-end (save-excursion (end-of-line) (current-column))))
         (cond ((< str-len (- pos-first column-start))
                (cons column-start pos-first))
               ((= pos-first pos-end)
                (cons column-start (sideline--window-width)))))
     (let* ((column-start (window-hscroll))
            (column-end (+ column-start (sideline--window-width)))
-           (pos-end (save-excursion (move-end-of-line nil) (current-column))))
+           (pos-end (save-excursion (end-of-line) (current-column))))
       (when (< str-len (- column-end pos-end))
         (cons column-end pos-end)))))
 
 (defun sideline--find-line (str-len on-left &optional direction)
   "Find a line where the string can be inserted."
-  (let ((inhibit-field-text-motion t)
-        (bol (window-start)) (eol (window-end))
+  (let ((bol (window-start)) (eol (window-end))
         (occupied-lines (if on-left sideline--occupied-lines-left
                           sideline--occupied-lines-right))
         (going-up (eq direction 'up))
@@ -225,19 +219,20 @@ calculate to the right side."
                    (keymap (progn (define-key map [down-mouse-1]
                                               (lambda ()
                                                 (interactive)
-                                                (funcall action candidate)))
+                                                (funcall action sideline--last-bound candidate)))
                                   map)))
               (add-text-properties 0 len `(keymap ,keymap mouse-face highlight) candidate)))
-          (format sideline-format candidate)))
+          candidate))
        (margin (sideline--margin-width))
-       (align (if on-left 'left-fringe 'right-fringe))
+       (align (if on-left 'left 'right))
        (string (concat
-                (propertize " " 'display `(space :align-to (- ,align ,(sideline--align len margin))))
+                (propertize " " 'display `((space :align-to (- ,align ,(sideline--align len margin)))
+                                           (space :width 0))
+                            `cursor t)
                 (propertize title 'display (sideline--compute-height))))
        (pos-ov (sideline--find-line (1+ (length title)) on-left sideline--find-direction))
        (ov (make-overlay (car pos-ov) (car pos-ov) nil t t)))
-    (overlay-put ov 'before-string string)
-    (overlay-put ov 'intangible t)
+    (overlay-put ov 'after-string string)
     (overlay-put ov 'position (car pos-ov))
     (overlay-put ov 'window (get-buffer-window))
     (overlay-put ov 'priority sideline-priority)
@@ -262,8 +257,10 @@ calculate to the right side."
 
 (defun sideline--post-command ()
   "Post command."
-  (let ((bound (bounds-of-thing-at-point 'symbol)))
-    (unless (equal sideline--last-bound bound)
+  (let ((inhibit-field-text-motion t)
+        (bound (bounds-of-thing-at-point 'symbol)))
+    (when (or (null bound)
+              (not (equal sideline--last-bound bound)))
       (setq sideline--last-bound bound)  ; update
       ;; Reset
       (if sideline-backends-skip-current-line
