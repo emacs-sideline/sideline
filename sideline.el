@@ -32,6 +32,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'rect)
 (require 'subr-x)
 
@@ -50,6 +51,12 @@
   "The list of active backends to display sideline on the right."
   :type 'list
   :group 'sideline)
+
+(defcustom sideline-order 'up
+  "Display order."
+  :type '(choice (const :tag "Search up" up)
+                 (const :tag "Search down" down))
+  :group 'line-reminder)
 
 (defface sideline-default
   '((((background light)) :foreground "DarkOrange")
@@ -70,18 +77,25 @@
 (defvar-local sideline--overlays nil
   "Displayed overlays.")
 
-(defvar-local sideline--last-bounds nil
+(defvar-local sideline--last-bound nil
   "Record of last bound; if this isn't the same, clean up overlays.")
 
 (defvar-local sideline--occupied-lines-left nil
-  "List of lines occupied by an overlay on the left.")
+  "Occupied lines on the left.")
 
 (defvar-local sideline--occupied-lines-right nil
-  "List of lines occupied by an overlay on the left.")
+  "Occupied lines on the right.")
+
+(defvar-local sideline--find-direction 'up
+  "This is either `up' or `down'.")
 
 ;;
 ;; (@* "Util" )
 ;;
+
+(defun sideline--column-to-point (column)
+  "Convert COLUMN to point."
+  (save-excursion (move-to-column column) (point)))
 
 (defun sideline--line-number-display-width ()
   "Safe way to get value from function `line-number-display-width'."
@@ -147,19 +161,40 @@ If argument ON-LEFT is non-nil, we calculate to the left side.  Otherwise,
 calculate to the right side."
   (if on-left
       (let ((column-start (window-hscroll))
-            (pos-first (progn (back-to-indentation) (current-column))))
-        (< str-len (- pos-first column-start)))
+            (pos-first (save-excursion (back-to-indentation) (current-column))))
+        (when (< str-len (- pos-first column-start))
+          (cons pos-first column-start)))
     (let* ((column-start (window-hscroll))
            (column-end (+ column-start (sideline--window-width)))
-           (pos-end (progn (move-end-of-line nil) (current-column))))
-      (< str-len (- column-end pos-end)))))
+           (pos-end (save-excursion (move-end-of-line nil) (current-column))))
+      (when (< str-len (- column-end pos-end))
+        (cons column-end pos-end)))))
 
 (defun sideline--find-line (str-len on-left)
   "Find a line where the string can be inserted."
-  (let ((inhibit-field-text-motion t))
+  (let ((inhibit-field-text-motion t)
+        (bol (window-start)) (eol (window-end))
+        (occupied-lines (if on-left sideline--occupied-lines-left
+                          sideline--occupied-lines-right))
+        (going-up (eq sideline--find-direction 'up))
+        (skip-first t)
+        (break-it)
+        (pos-ov))
     (save-excursion
-
-      )))
+      (while (and (not break-it) (if going-up (< bol (point)) (< (point) eol)))
+        (unless skip-first
+          (forward-line (if going-up -1 1)))
+        (setq skip-first nil)
+        (unless (memq (line-beginning-position) occupied-lines)
+          (when-let ((col (sideline--calc-space str-len on-left)))
+            (setq pos-ov (cons (sideline--column-to-point (car col))
+                               (sideline--column-to-point (cdr col))))
+            (setq break-it t)
+            (push (line-beginning-position) occupied-lines)))))
+    (if on-left
+        (setq sideline--occupied-lines-left occupied-lines)
+      (setq sideline--occupied-lines-right occupied-lines))
+    pos-ov))
 
 ;;
 ;; (@* "Overlays" )
@@ -172,7 +207,8 @@ calculate to the right side."
 (defun sideline--create-ov (candidate action face on-left)
   "Create information (CANDIDATE) overlay."
   (when-let*
-      ((title
+      ((len (length candidate))
+       (title
         (progn
           (add-face-text-property 0 len face nil candidate)
           (when action
@@ -184,12 +220,13 @@ calculate to the right side."
                                   map)))
               (add-text-properties 0 len `(keymap ,keymap mouse-face highlight) candidate)))
           (format sideline-format candidate)))
+       (margin (sideline--margin-width))
        (align (if on-left 'left-fringe 'right-fringe))
        (string (concat
-                (propertize " " 'display `(space :align-to (- ,align ,(sideline--align (+ len (length image)) margin))))
+                (propertize " " 'display `(space :align-to (- ,align ,(sideline--align len margin))))
                 (propertize title 'display (sideline--compute-height))))
        (pos-ov (sideline--find-line (1+ (length title)) on-left))
-       (ov (make-overlay (car pos-ov) (car pos-ov))))
+       (ov (make-overlay (car pos-ov) (car pos-ov) nil t t)))
     (overlay-put ov 'after-string string)
     (overlay-put ov 'intangible t)
     (overlay-put ov 'position (car pos-ov))
@@ -200,7 +237,7 @@ calculate to the right side."
 ;; (@* "Core" )
 ;;
 
-(defun sideline--call-backend (backend command on-left)
+(defun sideline--call-backend (backend command)
   "Return BACKEND's result with COMMAND."
   (funcall backend command))
 
@@ -209,18 +246,26 @@ calculate to the right side."
   (dolist (backend backends)
     (let ((candidates (sideline--call-backend backend 'candidates))
           (action (sideline--call-backend backend 'action))
-          (face (or (sideline--call-backend backend 'face) sideline-default)))
+          (face (or (sideline--call-backend backend 'face) 'sideline-default)))
       (dolist (candidate candidates)
         (sideline--create-ov candidate action face on-left)))))
 
 (defun sideline--post-command ()
   "Post command."
   (let ((bound (bounds-of-thing-at-point 'symbol)))
-    (unless (equal sideline--last-bounds bound)
+    (unless (equal sideline--last-bound bound)
+      (setq sideline--last-bound bound)  ; update
+      ;; Reset
+      (if sideline-backends-skip-current-line
+          (let ((mark (list (line-beginning-position))))
+            (setq sideline--occupied-lines-left mark
+                  sideline--occupied-lines-right mark))
+        (setq sideline--occupied-lines-left nil
+              sideline--occupied-lines-right nil))
+      (setq sideline--find-direction sideline-order)
       (sideline--delete-ovs)
-      (setq sideline--last-bounds bound)))
-  (sideline--render-backends sideline-backends-left t)
-  (sideline--render-backends sideline-backends-right nil))
+      (sideline--render-backends sideline-backends-left t)
+      (sideline--render-backends sideline-backends-right nil))))
 
 ;;
 ;; (@* "Entry" )
