@@ -265,12 +265,12 @@ ON-LEFT for details."
            (empty-ln (= pos-start pos-end))
            (ov (make-overlay pos-start (if empty-ln pos-start (+ pos-start len-str))
                              nil t t)))
-      (if on-left
-          (if empty-ln
-              (overlay-put ov 'before-string str)
-            (overlay-put ov 'display str)
-            (overlay-put ov 'invisible t))
-        (overlay-put ov 'after-string str))
+      (cond (on-left
+             (if empty-ln
+                 (overlay-put ov 'after-string str)
+               (overlay-put ov 'display str)
+               (overlay-put ov 'invisible t)))
+            (t (overlay-put ov 'after-string str)))
       (overlay-put ov 'window (get-buffer-window))
       (overlay-put ov 'priority sideline-priority)
       (push ov sideline--overlays))))
@@ -336,6 +336,11 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
       (sideline--render-backends sideline-backends-left t)
       (sideline--render-backends sideline-backends-right nil))))
 
+(defun sideline--reset ()
+  "Clean up for next use."
+  (setq sideline--last-bound nil)
+  (sideline--delete-ovs))
+
 ;;
 ;; (@* "Entry" )
 ;;
@@ -347,7 +352,7 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
 (defun sideline--disable ()
   "Disable `sideline' in current buffer."
   (remove-hook 'post-command-hook #'sideline--post-command t)
-  (sideline--delete-ovs))
+  (sideline--reset))
 
 ;;;###autoload
 (define-minor-mode sideline-mode
