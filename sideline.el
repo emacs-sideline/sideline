@@ -249,14 +249,14 @@ ON-LEFT for details."
             (format sideline-format-right candidate))))
        (len-title (length title))
        (margin (sideline--margin-width))
-       (align (if on-left 'left 'right))
        (str (concat
-             (propertize " " 'display `((space :align-to (- ,align ,(sideline--align len-title margin)))
-                                        (space :width 0))
-                         `cursor t)
+             (unless on-left
+               (propertize " " 'display `((space :align-to (- right ,(sideline--align (1- len-title) margin)))
+                                          (space :width 0))
+                           `cursor t))
              (propertize title 'display (sideline--compute-height))))
        (len-str (length str))
-       (pos-ov (sideline--find-line (length title) on-left sideline-order)))
+       (pos-ov (sideline--find-line len-title on-left sideline-order)))
     ;; Create overlay
     (let* ((pos-start (car pos-ov)) (pos-end (cdr pos-ov))
            (empty-ln (= pos-start pos-end))
