@@ -58,7 +58,7 @@ then you can tell your user to...
 
 ## 📂 Example projects
 
-* WIP
+* [sideline-flycheck](https://github.com/jcs-elpa/sideline-flycheck)
 
 ## Contribute
 
