@@ -253,23 +253,27 @@ ON-LEFT for details."
        (len-title (length title))
        (margin (sideline--margin-width))
        (align (if on-left 'left 'right))
-       (string (concat
-                (propertize " " 'display `((space :align-to (- ,align ,(sideline--align len-title margin)))
-                                           (space :width 0))
-                            `cursor t)
-                (propertize title 'display (sideline--compute-height))))
-       (pos-ov (sideline--find-line (1+ (length title)) on-left sideline--find-direction))
-       (pos-start (car pos-ov))
-       (pos-end (car pos-ov))
-       (ov (make-overlay pos-start (if (= pos-start pos-end) pos-start
-                                     (+ pos-start len-title))
-                         nil t t)))
-    ;;(message "%s %s" candidate (cons pos-start (+ pos-start len-title)))
-    (overlay-put ov 'after-string string)
-    (overlay-put ov 'window (get-buffer-window))
-    (overlay-put ov 'priority sideline-priority)
-    (overlay-put ov 'invisible t)
-    (push ov sideline--overlays)))
+       (str (concat
+             (propertize " " 'display `((space :align-to (- ,align ,(sideline--align len-title margin)))
+                                        (space :width 0))
+                         `cursor t)
+             (propertize title 'display (sideline--compute-height))))
+       (len-str (length str))
+       (pos-ov (sideline--find-line (length title) on-left sideline--find-direction)))
+    ;; Create overlay
+    (let* ((pos-start (car pos-ov)) (pos-end (cdr pos-ov))
+           (empty-ln (= pos-start pos-end))
+           (ov (make-overlay pos-start (if empty-ln pos-start (+ pos-start len-str))
+                             nil t t)))
+      (if on-left
+          (if empty-ln
+              (overlay-put ov 'before-string str)
+            (overlay-put ov 'display str)
+            (overlay-put ov 'invisible t))
+        (overlay-put ov 'after-string str))
+      (overlay-put ov 'window (get-buffer-window))
+      (overlay-put ov 'priority sideline-priority)
+      (push ov sideline--overlays))))
 
 ;;
 ;; (@* "Async" )
