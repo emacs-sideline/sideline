@@ -89,6 +89,9 @@
 (defvar-local sideline--find-direction 'up
   "This is either `up' or `down'.")
 
+(defvar-local sideline--async-queue nil
+  "List of aysnc backends queue.")
+
 ;;
 ;; (@* "Util" )
 ;;
@@ -208,7 +211,10 @@ calculate to the right side."
   (mapc #'delete-overlay sideline--overlays))
 
 (defun sideline--create-ov (candidate action face on-left)
-  "Create information (CANDIDATE) overlay."
+  "Create information (CANDIDATE) overlay.
+
+See function `sideline--render' document string for arguments ACTION, FACE, and
+ON-LEFT for details."
   (when-let*
       ((len (length candidate))
        (title
@@ -239,6 +245,21 @@ calculate to the right side."
     (push ov sideline--overlays)))
 
 ;;
+;; (@* "Async" )
+;;
+
+(defun sideline--render (candidates action face on-left)
+  "Render a list of backends (CANDIDATES).
+
+Argument ACTION is the code action callback.
+
+Argument FACE is optional face to render text.
+
+Argument ON-LEFT is a flag indicates rendering alignment."
+  (dolist (candidate candidates)
+    (sideline--create-ov candidate action face on-left)))
+
+;;
 ;; (@* "Core" )
 ;;
 
@@ -252,8 +273,13 @@ calculate to the right side."
     (let ((candidates (sideline--call-backend backend 'candidates))
           (action (sideline--call-backend backend 'action))
           (face (or (sideline--call-backend backend 'face) 'sideline-default)))
-      (dolist (candidate candidates)
-        (sideline--create-ov candidate action face on-left)))))
+      (if (eq (car candidates) :async)
+          (progn
+            (funcall (cdr candidates)
+                     (lambda (cands &rest _)
+                       (sideline--render cands action face on-left)))
+            (push backend sideline--async-queue))
+        (sideline--render candidates action face on-left)))))
 
 (defun sideline--post-command ()
   "Post command."
