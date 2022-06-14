@@ -5,17 +5,35 @@
 
 [![CI](https://github.com/jcs-elpa/sideline/actions/workflows/test.yml/badge.svg)](https://github.com/jcs-elpa/sideline/actions/workflows/test.yml)
 
+This library provides the frontend UI to display information either on the
+left/right side of the buffer window.
+
+*P.S. The implementation is extracted and modified from [lsp-ui-sideline](https://github.com/emacs-lsp/lsp-ui/blob/master/lsp-ui-sideline.el)*
+
 ## Usage
 
+## Define your own backend
+
+Following is an example code to define your own sideline backend:
+
 ```elisp
-(defun sideline-my-backend (command)
-  "Example of sideline backend."
+(defun my-backend (command)
+  "Example backend."
   (cl-case command
-    (`candidates '("info 1" "info 2" "info 3"))
-    (`action (lambda (candidate)
-               ;; Do something..
-               ))))
+    (`candidates '("info 1" "info 2" "info 3"))  ; required
+    (`action (lambda (candidate bound &rest _)   ; optional
+               (message "Execute command for `%s`!" candidate)))))
 ```
+
+then you can tell your user to...
+
+```elisp
+(setq sidelin-backends-left '(my-backend))  ; use `sidelin-backends-right' for right alignment
+```
+
+## Example packages
+
+* WIP
 
 ## Contribute
 
