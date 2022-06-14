@@ -253,7 +253,8 @@ ON-LEFT for details."
 
 Argument ACTION is the code action callback.
 
-Argument FACE is optional face to render text.
+Argument FACE is optional face to render text; default face is
+`sideline-default'.
 
 Argument ON-LEFT is a flag indicates rendering alignment."
   (dolist (candidate candidates)
@@ -272,12 +273,16 @@ Argument ON-LEFT is a flag indicates rendering alignment."
   (dolist (backend backends)
     (let ((candidates (sideline--call-backend backend 'candidates))
           (action (sideline--call-backend backend 'action))
-          (face (or (sideline--call-backend backend 'face) 'sideline-default)))
+          (face (or (sideline--call-backend backend 'face) 'sideline-default))
+          (buffer (current-buffer)))
       (if (eq (car candidates) :async)
           (progn
             (funcall (cdr candidates)
                      (lambda (cands &rest _)
-                       (sideline--render cands action face on-left)))
+                       (when (buffer-live-p buffer)
+                         (with-current-buffer buffer
+                           (when sideline-mode
+                             (sideline--render cands action face on-left))))))
             (push backend sideline--async-queue))
         (sideline--render candidates action face on-left)))))
 
