@@ -96,9 +96,6 @@
 (defvar-local sideline--occupied-lines-right nil
   "Occupied lines on the right.")
 
-(defvar-local sideline--find-direction 'up
-  "This is either `up' or `down'.")
-
 ;;
 ;; (@* "Util" )
 ;;
@@ -190,8 +187,8 @@ Argument STR-LEN is the length of the message, use to calculate the alignment.
 
 If argument ON-LEFT is non-nil, it will align to the left instead of right.
 
-See variable `sideline--find-direction' document string for optional argument
-DIRECTION for details."
+See variable `sideline-order' document string for optional argument DIRECTION
+for details."
   (let ((bol (window-start)) (eol (window-end))
         (occupied-lines (if on-left sideline--occupied-lines-left
                           sideline--occupied-lines-right))
@@ -259,7 +256,7 @@ ON-LEFT for details."
                          `cursor t)
              (propertize title 'display (sideline--compute-height))))
        (len-str (length str))
-       (pos-ov (sideline--find-line (length title) on-left sideline--find-direction)))
+       (pos-ov (sideline--find-line (length title) on-left sideline-order)))
     ;; Create overlay
     (let* ((pos-start (car pos-ov)) (pos-end (cdr pos-ov))
            (empty-ln (= pos-start pos-end))
@@ -331,7 +328,6 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
                   sideline--occupied-lines-right mark))
         (setq sideline--occupied-lines-left nil
               sideline--occupied-lines-right nil))
-      (setq sideline--find-direction sideline-order)
       (sideline--delete-ovs)
       (sideline--render-backends sideline-backends-left t)
       (sideline--render-backends sideline-backends-right nil))))

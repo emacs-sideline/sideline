@@ -10,7 +10,19 @@ left/right side of the buffer window.
 
 *P.S. The implementation is extracted and modified from [lsp-ui-sideline](https://github.com/emacs-lsp/lsp-ui#lsp-ui-sideline)*
 
-## 🔨 Usage
+## 🔨 Quickstart
+
+```elisp
+(leaf sideline
+  :init
+  (setq sideline-backends-skip-current-line t  ; don't display on current line
+        sideline-order 'up                     ; or 'down
+        sideline-backends-left '(...)          ; backends display on the left
+        sideline-backends-right '(...)         ; backends display on the right
+        sideline-format-left "%s   "           ; format for left aligment
+        sideline-format-right "   %s"          ; format for right aligment
+        sideline-priority 100))                ; overlays' priority
+```
 
 ## 📌 Define your own backend
 
