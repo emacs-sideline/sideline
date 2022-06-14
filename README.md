@@ -8,7 +8,7 @@
 This library provides the frontend UI to display information either on the
 left/right side of the buffer window.
 
-*P.S. The implementation is extracted and modified from [lsp-ui-sideline](https://github.com/emacs-lsp/lsp-ui/blob/master/lsp-ui-sideline.el)*
+*P.S. The implementation is extracted and modified from [lsp-ui-sideline](https://github.com/emacs-lsp/lsp-ui#lsp-ui-sideline)*
 
 ## Usage
 
