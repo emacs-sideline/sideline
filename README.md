@@ -10,9 +10,9 @@ left/right side of the buffer window.
 
 *P.S. The implementation is extracted and modified from [lsp-ui-sideline](https://github.com/emacs-lsp/lsp-ui#lsp-ui-sideline)*
 
-## Usage
+## 🔨 Usage
 
-## Define your own backend
+## 📌 Define your own backend
 
 Following is an example code to define your own sideline backend:
 
@@ -25,13 +25,25 @@ Following is an example code to define your own sideline backend:
                (message "Execute command for `%s`!" candidate)))))
 ```
 
+or define it asynchronously:
+
+```elisp
+(defun my-backend-async (command)
+  "Example backend."
+  (cl-case command
+    (`candidates (cons :async (lambda (callback &rest _)
+                                (funcall callback '("info 1" "info 2" "info 3")))))
+    (`action (lambda (candidate bound &rest _)   ; optional
+               (message "Execute command for `%s`!" candidate)))))
+```
+
 then you can tell your user to...
 
 ```elisp
 (setq sidelin-backends-left '(my-backend))  ; use `sidelin-backends-right' for right alignment
 ```
 
-## Example packages
+## 📂 Example projects
 
 * WIP
 
