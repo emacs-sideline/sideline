@@ -69,6 +69,16 @@
   :type 'boolean
   :group 'sideline)
 
+(defcustom sideline-format-left "%s   "
+  "Format candidate string for left alignment."
+  :type 'string
+  :group 'sideline)
+
+(defcustom sideline-format-right "   %s"
+  "Format candidate string for right alignment."
+  :type 'string
+  :group 'sideline)
+
 (defcustom sideline-priority 100
   "Overlays' priority."
   :type 'integer
@@ -231,27 +241,34 @@ Argument CANDIDATE is the data for users."
 See function `sideline--render' document string for arguments ACTION, FACE, and
 ON-LEFT for details."
   (when-let*
-      ((len (length candidate))
+      ((len-cand (length candidate))
        (title
         (progn
-          (add-face-text-property 0 len face nil candidate)
+          (add-face-text-property 0 len-cand face nil candidate)
           (when action
             (let ((keymap (sideline--create-keymap action candidate)))
-              (add-text-properties 0 len `(keymap ,keymap mouse-face highlight) candidate)))
-          candidate))
+              (add-text-properties 0 len-cand `(keymap ,keymap mouse-face highlight) candidate)))
+          (if on-left (format sideline-format-left candidate)
+            (format sideline-format-right candidate))))
+       (len-title (length title))
        (margin (sideline--margin-width))
        (align (if on-left 'left 'right))
        (string (concat
-                (propertize " " 'display `((space :align-to (- ,align ,(sideline--align len margin)))
+                (propertize " " 'display `((space :align-to (- ,align ,(sideline--align len-title margin)))
                                            (space :width 0))
                             `cursor t)
                 (propertize title 'display (sideline--compute-height))))
        (pos-ov (sideline--find-line (1+ (length title)) on-left sideline--find-direction))
-       (ov (make-overlay (car pos-ov) (car pos-ov) nil t t)))
+       (pos-start (car pos-ov))
+       (pos-end (car pos-ov))
+       (ov (make-overlay pos-start (if (= pos-start pos-end) pos-start
+                                     (+ pos-start len-title))
+                         nil t t)))
+    ;;(message "%s %s" candidate (cons pos-start (+ pos-start len-title)))
     (overlay-put ov 'after-string string)
-    (overlay-put ov 'position (car pos-ov))
     (overlay-put ov 'window (get-buffer-window))
     (overlay-put ov 'priority sideline-priority)
+    (overlay-put ov 'invisible t)
     (push ov sideline--overlays)))
 
 ;;
