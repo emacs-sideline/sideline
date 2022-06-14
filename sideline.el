@@ -89,9 +89,6 @@
 (defvar-local sideline--find-direction 'up
   "This is either `up' or `down'.")
 
-(defvar-local sideline--async-queue nil
-  "List of aysnc backends queue.")
-
 ;;
 ;; (@* "Util" )
 ;;
@@ -177,7 +174,14 @@ calculate to the right side."
         (cons column-end pos-end)))))
 
 (defun sideline--find-line (str-len on-left &optional direction)
-  "Find a line where the string can be inserted."
+  "Find a line where the string can be inserted.
+
+Argument STR-LEN is the length of the message, use to calculate the alignment.
+
+If argument ON-LEFT is non-nil, it will align to the left instead of right.
+
+See variable `sideline--find-direction' document string for optional argument
+DIRECTION for details."
   (let ((bol (window-start)) (eol (window-end))
         (occupied-lines (if on-left sideline--occupied-lines-left
                           sideline--occupied-lines-right))
@@ -202,6 +206,17 @@ calculate to the right side."
     (or pos-ov
         (sideline--find-line str-len on-left (if going-up 'down 'up)))))
 
+(defun sideline--create-keymap (action candidate)
+  "Create keymap for sideline ACTION.
+
+Argument CANDIDATE is the data for users."
+  (let ((map (make-sparse-keymap)))
+    (define-key map [down-mouse-1]
+                (lambda ()
+                  (interactive)
+                  (funcall action sideline--last-bound candidate)))
+    map))
+
 ;;
 ;; (@* "Overlays" )
 ;;
@@ -221,12 +236,7 @@ ON-LEFT for details."
         (progn
           (add-face-text-property 0 len face nil candidate)
           (when action
-            (let* ((map (make-sparse-keymap))
-                   (keymap (progn (define-key map [down-mouse-1]
-                                              (lambda ()
-                                                (interactive)
-                                                (funcall action sideline--last-bound candidate)))
-                                  map)))
+            (let ((keymap (sideline--create-keymap action candidate)))
               (add-text-properties 0 len `(keymap ,keymap mouse-face highlight) candidate)))
           candidate))
        (margin (sideline--margin-width))
@@ -269,21 +279,21 @@ Argument ON-LEFT is a flag indicates rendering alignment."
   (funcall backend command))
 
 (defun sideline--render-backends (backends on-left)
-  "Render a list of backends."
+  "Render a list of BACKENDS.
+
+If argument ON-LEFT is non-nil, it will align to the left instead of right."
   (dolist (backend backends)
     (let ((candidates (sideline--call-backend backend 'candidates))
           (action (sideline--call-backend backend 'action))
           (face (or (sideline--call-backend backend 'face) 'sideline-default))
-          (buffer (current-buffer)))
+          (buffer (current-buffer)))  ; for async check
       (if (eq (car candidates) :async)
-          (progn
-            (funcall (cdr candidates)
-                     (lambda (cands &rest _)
-                       (when (buffer-live-p buffer)
-                         (with-current-buffer buffer
-                           (when sideline-mode
-                             (sideline--render cands action face on-left))))))
-            (push backend sideline--async-queue))
+          (funcall (cdr candidates)
+                   (lambda (cands &rest _)
+                     (when (buffer-live-p buffer)
+                       (with-current-buffer buffer
+                         (when sideline-mode
+                           (sideline--render cands action face on-left))))))
         (sideline--render candidates action face on-left)))))
 
 (defun sideline--post-command ()
