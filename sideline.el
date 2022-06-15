@@ -247,8 +247,7 @@ available lines in both directions (up & down)."
     (save-excursion
       (while (not break-it)
         (if skip-first (setq skip-first nil)
-          (forward-line (if going-up -1 1))
-          (when (or (bobp) (eobp)) (setq break-it t)))
+          (forward-line (if going-up -1 1)))
         (unless (if going-up (<= bol (point)) (<= (point) eol))
           (setq break-it t))
         (when (and (not (memq (line-beginning-position) occupied-lines))
@@ -257,7 +256,8 @@ available lines in both directions (up & down)."
             (setq pos-ov (cons (sideline--column-to-point (car col))
                                (sideline--column-to-point (cdr col))))
             (setq break-it t)
-            (push (line-beginning-position) occupied-lines)))))
+            (push (line-beginning-position) occupied-lines)))
+        (when (if going-up (bobp) (eobp)) (setq break-it t))))
     (if on-left
         (setq sideline--occupied-lines-left occupied-lines)
       (setq sideline--occupied-lines-right occupied-lines))
