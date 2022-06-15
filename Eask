@@ -1,5 +1,5 @@
 (package "sideline"
-         "0.1.0"
+         "0.1.2"
          "Show informations on the side")
 
 (package-file "sideline.el")
