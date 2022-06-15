@@ -90,6 +90,11 @@
   :type 'integer
   :group 'sideline)
 
+(defcustom sideline-delay 0.2
+  "Number of seconds to wait before showing sideline."
+  :type 'number
+  :group 'sideline)
+
 (defcustom sideline-pre-render-hook nil
   "Hooks runs before rendering sidelines."
   :type 'hook
@@ -154,6 +159,16 @@
 ;;
 ;; (@* "Util" )
 ;;
+
+(defmacro sideline--with-buffer (buffer-or-name &rest body)
+  "Execute the forms in BODY with BUFFER-OR-NAME temporarily current."
+  (declare (indent 1) (debug t))
+  `(when (buffer-live-p ,buffer-or-name)
+     (with-current-buffer ,buffer-or-name ,@body)))
+
+(defun sideline--kill-timer (timer)
+  "Kill TIMER."
+  (when (timerp timer) (cancel-timer timer)))
 
 (defun sideline--column-to-point (column)
   "Convert COLUMN to point."
@@ -382,19 +397,22 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
       (bound-and-true-p company-pseudo-tooltip-overlay)
       (bound-and-true-p lsp-ui-peek--overlay)))
 
-(defun sideline-render ()
-  "Render sideline once."
-  (sideline--delete-ovs)
-  (unless (funcall sideline-inhibit-display-function)
-    (run-hooks 'sideline-pre-render-hook)
-    (let ((mark (list (line-beginning-position))))
-      (setq sideline--occupied-lines-left
-            (if sideline-backends-left-skip-current-line mark nil))
-      (setq sideline--occupied-lines-right
-            (if sideline-backends-right-skip-current-line mark nil)))
-    (sideline--render-backends sideline-backends-left t)
-    (sideline--render-backends sideline-backends-right nil)
-    (run-hooks 'sideline-post-render-hook)))
+(defun sideline-render (buffer)
+  "Render sideline once in the BUFFER."
+  (sideline--with-buffer buffer
+    (unless (funcall sideline-inhibit-display-function)
+      (run-hooks 'sideline-pre-render-hook)
+      (let ((mark (list (line-beginning-position))))
+        (setq sideline--occupied-lines-left
+              (if sideline-backends-left-skip-current-line mark nil))
+        (setq sideline--occupied-lines-right
+              (if sideline-backends-right-skip-current-line mark nil)))
+      (sideline--render-backends sideline-backends-left t)
+      (sideline--render-backends sideline-backends-right nil)
+      (run-hooks 'sideline-post-render-hook))))
+
+(defvar-local sideline--delay-timer nil
+  "Timer for delay.")
 
 (defun sideline--post-command ()
   "Post command."
@@ -403,7 +421,10 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
     (when (or (null bound)
               (not (equal sideline--last-bound bound)))
       (setq sideline--last-bound bound)  ; update
-      (sideline-render)
+      (sideline--delete-ovs)
+      (sideline--kill-timer sideline--delay-timer)
+      (setq sideline--delay-timer
+            (run-with-idle-timer sideline-delay nil #'sideline-render (current-buffer)))
       (run-hooks 'sideline-reset-hook))))
 
 (defun sideline--reset ()
