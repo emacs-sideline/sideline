@@ -42,12 +42,11 @@ or define it asynchronously:
 
 ```elisp
 (defun my-backend-async (command)
-  "Example backend."
+  "Example async backend."
   (cl-case command
     (`candidates (cons :async (lambda (callback &rest _)
                                 (funcall callback '("info 1" "info 2" "info 3")))))
-    (`action (lambda (candidate bound &rest _)   ; optional
-               (message "Execute command for `%s`!" candidate)))))
+    (`action ...)))
 ```
 
 then you can tell your user to...
@@ -55,6 +54,12 @@ then you can tell your user to...
 ```elisp
 (setq sidelin-backends-left '(my-backend))  ; use `sidelin-backends-right' for right alignment
 ```
+
+Here is a list of supported commands:
+
+* `candidates` - list of strings to display; accept async function
+* `action` - callback function afterthe mouse click
+* `face` - face overrides the default sideline face
 
 ## 📂 Example projects
 
