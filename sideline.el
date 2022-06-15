@@ -105,6 +105,11 @@
   :type 'hook
   :group 'sideline)
 
+(defcustom sideline-inhibit-display-function #'sideline-stop-p
+  "Function call to determine weather to display sideline or not."
+  :type 'function
+  :group 'sideline)
+
 (defvar-local sideline--overlays nil
   "Displayed overlays.")
 
@@ -371,18 +376,25 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
                            (sideline--render cands action face on-left))))))
         (sideline--render candidates action face on-left)))))
 
+(defun sideline-stop-p ()
+  "Return non-nil if the sideline should not be display."
+  (or (region-active-p)
+      (bound-and-true-p company-pseudo-tooltip-overlay)
+      (bound-and-true-p lsp-ui-peek--overlay)))
+
 (defun sideline-render ()
   "Render sideline once."
-  (run-hooks 'sideline-pre-render-hook)
-  (let ((mark (list (line-beginning-position))))
-    (setq sideline--occupied-lines-left
-          (if sideline-backends-left-skip-current-line mark nil))
-    (setq sideline--occupied-lines-right
-          (if sideline-backends-right-skip-current-line mark nil)))
   (sideline--delete-ovs)
-  (sideline--render-backends sideline-backends-left t)
-  (sideline--render-backends sideline-backends-right nil)
-  (run-hooks 'sideline-post-render-hook))
+  (unless (funcall sideline-inhibit-display-function)
+    (run-hooks 'sideline-pre-render-hook)
+    (let ((mark (list (line-beginning-position))))
+      (setq sideline--occupied-lines-left
+            (if sideline-backends-left-skip-current-line mark nil))
+      (setq sideline--occupied-lines-right
+            (if sideline-backends-right-skip-current-line mark nil)))
+    (sideline--render-backends sideline-backends-left t)
+    (sideline--render-backends sideline-backends-right nil)
+    (run-hooks 'sideline-post-render-hook)))
 
 (defun sideline--post-command ()
   "Post command."
