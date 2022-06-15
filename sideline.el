@@ -85,6 +85,21 @@
   :type 'integer
   :group 'sideline)
 
+(defcustom sideline-pre-render-hook nil
+  "Hooks runs before rendering sidelines."
+  :type 'hook
+  :group 'sideline)
+
+(defcustom sideline-post-render-hook nil
+  "Hooks runs after rendering sidelines."
+  :type 'hook
+  :group 'sideline)
+
+(defcustom sideline-reset-hook nil
+  "Hooks runs once the sideline is reset in `post-command-hook'."
+  :type 'hook
+  :group 'sideline)
+
 (defvar-local sideline--overlays nil
   "Displayed overlays.")
 
@@ -227,11 +242,13 @@ for details."
         (break-it)
         (pos-ov))
     (save-excursion
-      (while (and (not break-it) (if going-up (< bol (point)) (< (point) eol)))
-        (unless skip-first
+      (while (not break-it)
+        (if skip-first (setq skip-first nil)
           (forward-line (if going-up -1 1)))
-        (setq skip-first nil)
-        (unless (memq (line-beginning-position) occupied-lines)
+        (unless (if going-up (<= bol (point)) (<= (point) eol))
+          (setq break-it t))
+        (when (and (not (memq (line-beginning-position) occupied-lines))
+                   (not break-it))
           (when-let ((col (sideline--calc-space str-len on-left)))
             (setq pos-ov (cons (sideline--column-to-point (car col))
                                (sideline--column-to-point (cdr col))))
@@ -344,6 +361,20 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
                            (sideline--render cands action face on-left))))))
         (sideline--render candidates action face on-left)))))
 
+(defun sideline-render ()
+  "Render sideline once."
+  (run-hooks 'sideline-pre-render-hook)
+  (if sideline-backends-skip-current-line
+      (let ((mark (list (line-beginning-position))))
+        (setq sideline--occupied-lines-left mark
+              sideline--occupied-lines-right mark))
+    (setq sideline--occupied-lines-left nil
+          sideline--occupied-lines-right nil))
+  (sideline--delete-ovs)
+  (sideline--render-backends sideline-backends-left t)
+  (sideline--render-backends sideline-backends-right nil)
+  (run-hooks 'sideline-post-render-hook))
+
 (defun sideline--post-command ()
   "Post command."
   (let ((inhibit-field-text-motion t)
@@ -351,16 +382,8 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
     (when (or (null bound)
               (not (equal sideline--last-bound bound)))
       (setq sideline--last-bound bound)  ; update
-      ;; Reset
-      (if sideline-backends-skip-current-line
-          (let ((mark (list (line-beginning-position))))
-            (setq sideline--occupied-lines-left mark
-                  sideline--occupied-lines-right mark))
-        (setq sideline--occupied-lines-left nil
-              sideline--occupied-lines-right nil))
-      (sideline--delete-ovs)
-      (sideline--render-backends sideline-backends-left t)
-      (sideline--render-backends sideline-backends-right nil))))
+      (sideline-render)
+      (run-hooks 'sideline-reset-hook))))
 
 (defun sideline--reset ()
   "Clean up for next use."
