@@ -9,6 +9,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 > Released N/A
 
 * Add variable for inhibit display function (ce5a1620d0448e0a0959a83f27721246ab78fa0e)
+* Add variable to delay sideline renderer (638fb873d6071eadac798b92dd212889df45f7e3)
 
 ## 0.1.1
 > Released Jun 15, 2022
