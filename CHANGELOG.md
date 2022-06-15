@@ -8,7 +8,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## 0.1.2 (Unreleased)
 > Released N/A
 
-* N/A
+* Add variable for inhibit display function (ce5a1620d0448e0a0959a83f27721246ab78fa0e)
 
 ## 0.1.1
 > Released Jun 15, 2022
