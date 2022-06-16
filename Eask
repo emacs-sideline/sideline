@@ -2,6 +2,9 @@
          "0.1.2"
          "Show informations on the side")
 
+(website-url "https://github.com/jcs-elpa/sideline")
+(keywords "sideline")
+
 (package-file "sideline.el")
 
 (source "gnu")

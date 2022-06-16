@@ -4,11 +4,10 @@
 ;; Created date 2022-06-13 22:08:26
 
 ;; Author: Shen, Jen-Chieh <jcs090218@gmail.com>
-;; Description: Show informations on the side
-;; Keyword: sideline
+;; URL: https://github.com/jcs-elpa/sideline
 ;; Version: 0.1.1
 ;; Package-Requires: ((emacs "26.1"))
-;; URL: https://github.com/jcs-elpa/sideline
+;; Keywords: sideline
 
 ;; This file is NOT part of GNU Emacs.
 
