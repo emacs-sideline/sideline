@@ -58,7 +58,7 @@ then you can tell your user to...
 Here is a list of supported commands:
 
 * `candidates` - list of strings to display; accept async function
-* `action` - callback function afterthe mouse click
+* `action` - callback function after the mouse click
 * `face` - face overrides the default sideline face
 
 ## 📂 Example projects
