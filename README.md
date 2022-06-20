@@ -65,6 +65,7 @@ Here is a list of supported commands:
 ## 📂 Example projects
 
 * [sideline-flycheck](https://github.com/jcs-elpa/sideline-flycheck)
+* [sideline-lsp](https://github.com/jcs-elpa/sideline-lsp)
 
 ## Contribute
 
