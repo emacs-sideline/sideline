@@ -52,8 +52,14 @@
   :type 'list
   :group 'sideline)
 
-(defcustom sideline-order 'up
-  "Display order."
+(defcustom sideline-order-left 'down
+  "Display order on the left sidelines."
+  :type '(choice (const :tag "Search up" up)
+                 (const :tag "Search down" down))
+  :group 'line-reminder)
+
+(defcustom sideline-order-right 'up
+  "Display order on the right sidelines."
   :type '(choice (const :tag "Search up" up)
                  (const :tag "Search down" down))
   :group 'line-reminder)
@@ -338,7 +344,8 @@ FACE, and ON-LEFT for details."
                            `cursor t))
              (propertize title 'display (sideline--compute-height))))
        (len-str (length str))
-       (pos-ov (sideline--find-line len-title on-left sideline-order)))
+       (pos-ov (sideline--find-line len-title on-left (if on-left sideline-order-left
+                                                        sideline-order-right))))
     ;; Create overlay
     (let* ((pos-start (car pos-ov)) (pos-end (cdr pos-ov))
            (empty-ln (= pos-start pos-end))

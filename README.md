@@ -17,7 +17,8 @@ left/right side of the buffer window.
 (leaf sideline
   :init
   (setq sideline-backends-skip-current-line t  ; don't display on current line
-        sideline-order 'up                     ; or 'down
+        sideline-order-left 'down              ; or 'up
+        sideline-order-right 'up               ; or 'down
         sideline-backends-left '(...)          ; backends display on the left
         sideline-backends-right '(...)         ; backends display on the right
         sideline-format-left "%s   "           ; format for left aligment
