@@ -400,18 +400,17 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
 (defun sideline-render (&optional buffer)
   "Render sideline once in the BUFFER."
   (sideline--with-buffer (or buffer (current-buffer))
-    (let ((inhibit-field-text-motion t))
-      (unless (funcall sideline-inhibit-display-function)
-        (run-hooks 'sideline-pre-render-hook)
-        (let ((mark (list (line-beginning-position))))
-          (setq sideline--occupied-lines-left
-                (if sideline-backends-left-skip-current-line mark nil))
-          (setq sideline--occupied-lines-right
-                (if sideline-backends-right-skip-current-line mark nil)))
-        (sideline--delete-ovs)  ; for function call externally
-        (sideline--render-backends sideline-backends-left t)
-        (sideline--render-backends sideline-backends-right nil)
-        (run-hooks 'sideline-post-render-hook)))))
+    (unless (funcall sideline-inhibit-display-function)
+      (run-hooks 'sideline-pre-render-hook)
+      (let ((mark (list (line-beginning-position))))
+        (setq sideline--occupied-lines-left
+              (if sideline-backends-left-skip-current-line mark nil))
+        (setq sideline--occupied-lines-right
+              (if sideline-backends-right-skip-current-line mark nil)))
+      (sideline--delete-ovs)  ; for function call externally
+      (sideline--render-backends sideline-backends-left t)
+      (sideline--render-backends sideline-backends-right nil)
+      (run-hooks 'sideline-post-render-hook))))
 
 (defvar-local sideline--delay-timer nil
   "Timer for delay.")
