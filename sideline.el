@@ -132,6 +132,7 @@
 
 (defun sideline--enable ()
   "Enable `sideline' in current buffer."
+  (setq sideline--last-bound-or-point t)  ; render immediately
   (add-hook 'post-command-hook #'sideline--post-command nil t))
 
 (defun sideline--disable ()
@@ -297,7 +298,7 @@ Argument CANDIDATE is the data for users."
     (define-key map [down-mouse-1]
                 (lambda ()
                   (interactive)
-                  (funcall action sideline--last-bound-or-point candidate)))
+                  (funcall action candidate)))
     map))
 
 ;;
