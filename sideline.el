@@ -216,7 +216,7 @@
 
 (defun sideline--align (&rest lengths)
   "Align sideline string by LENGTHS from the right of the window."
-  (+ (apply '+ lengths)
+  (+ (apply #'+ lengths)
      (if (display-graphic-p) 1 2)))
 
 (defun sideline--compute-height ()
