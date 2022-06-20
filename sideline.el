@@ -117,7 +117,7 @@
 (defvar-local sideline--overlays nil
   "Displayed overlays.")
 
-(defvar-local sideline--last-bound nil
+(defvar-local sideline--last-bound-or-point nil
   "Record of last bound; if this isn't the same, clean up overlays.")
 
 (defvar-local sideline--occupied-lines-left nil
@@ -297,7 +297,7 @@ Argument CANDIDATE is the data for users."
     (define-key map [down-mouse-1]
                 (lambda ()
                   (interactive)
-                  (funcall action sideline--last-bound candidate)))
+                  (funcall action sideline--last-bound-or-point candidate)))
     map))
 
 ;;
@@ -317,7 +317,7 @@ ON-LEFT for details."
       ((len-cand (length candidate))
        (title
         (progn
-          (unless (get-text-property 0 'face candidate)
+          (unless (get-text-property 0 'face candidate)  ; If no face, we apply one
             (add-face-text-property 0 len-cand face nil candidate))
           (when action
             (let ((keymap (sideline--create-keymap action candidate)))
@@ -385,10 +385,9 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
       (if (eq (car candidates) :async)
           (funcall (cdr candidates)
                    (lambda (cands &rest _)
-                     (when (buffer-live-p buffer)
-                       (with-current-buffer buffer
-                         (when sideline-mode
-                           (sideline--render cands action face on-left))))))
+                     (sideline--with-buffer buffer
+                       (when sideline-mode
+                         (sideline--render cands action face on-left)))))
         (sideline--render candidates action face on-left)))))
 
 (defun sideline-stop-p ()
@@ -418,10 +417,9 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
 (defun sideline--post-command ()
   "Post command."
   (let ((inhibit-field-text-motion t)
-        (bound (bounds-of-thing-at-point 'symbol)))
-    (when (or (null bound)
-              (not (equal sideline--last-bound bound)))
-      (setq sideline--last-bound bound)  ; update
+        (bound (or (bounds-of-thing-at-point 'symbol) (point))))
+    (unless (equal sideline--last-bound-or-point bound)
+      (setq sideline--last-bound-or-point bound)  ; update
       (sideline--delete-ovs)
       (sideline--kill-timer sideline--delay-timer)
       (setq sideline--delay-timer
@@ -430,7 +428,7 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
 
 (defun sideline--reset ()
   "Clean up for next use."
-  (setq sideline--last-bound nil)
+  (setq sideline--last-bound-or-point nil)
   (sideline--delete-ovs))
 
 (provide 'sideline)
