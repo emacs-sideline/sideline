@@ -34,7 +34,7 @@ Following is an example code to define your own sideline backend:
   "Example backend."
   (cl-case command
     (`candidates '("info 1" "info 2" "info 3"))  ; required
-    (`action (lambda (candidate bound &rest _)   ; optional
+    (`action (lambda (bound candidate &rest _)   ; optional
                (message "Execute command for `%s`!" candidate)))))
 ```
 
