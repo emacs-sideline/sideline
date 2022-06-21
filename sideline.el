@@ -120,6 +120,9 @@
   :type 'function
   :group 'sideline)
 
+(defconst sideline-char-width (string-pixel-width " ")
+  "Holds the system character width.")
+
 (defvar-local sideline--overlays nil
   "Displayed overlays.")
 
@@ -175,6 +178,12 @@
   (declare (indent 1) (debug t))
   `(when (buffer-live-p ,buffer-or-name)
      (with-current-buffer ,buffer-or-name ,@body)))
+
+(defun sideline--str-len (str)
+  "Calculate STR in pixel width."
+  (let ((len (string-pixel-width str)))
+    (+ (/ len sideline-char-width)
+       (if (zerop (% len sideline-char-width)) 0 1))))  ; add one if exceeed
 
 (defun sideline--kill-timer (timer)
   "Kill TIMER."
@@ -335,7 +344,7 @@ FACE, ON-LEFT, and ORDER for details."
               (add-text-properties 0 len-cand `(keymap ,keymap mouse-face highlight) candidate)))
           (if on-left (format sideline-format-left candidate)
             (format sideline-format-right candidate))))
-       (len-title (length title))
+       (len-title (sideline--str-len title))
        (margin (sideline--margin-width))
        (str (concat
              (unless on-left
