@@ -44,7 +44,9 @@ Alternatively, you could set it to cons cell with the search order.
                                   (sideline-flycheck . down))))
 ```
 
-<img src="./etc/1.png" width="60%"/>
+<p align="center">
+<img src="./etc/1.png" width="70%"/>
+</p>
 
 ## 📌 Define your own backend
 
