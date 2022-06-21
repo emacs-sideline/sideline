@@ -1,5 +1,5 @@
 (package "sideline"
-         "0.1.2"
+         "0.1.1"
          "Show informations on the side")
 
 (website-url "https://github.com/jcs-elpa/sideline")
