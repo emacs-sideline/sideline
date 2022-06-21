@@ -11,6 +11,18 @@ left/right side of the buffer window.
 
 *P.S. The implementation is extracted and modified from [lsp-ui-sideline](https://github.com/emacs-lsp/lsp-ui#lsp-ui-sideline)*
 
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [sideline](#sideline)
+    - [🔨 Quickstart](#🔨-quickstart)
+        - [👥 Configure backends](#👥-configure-backends)
+    - [📌 Define your own backend](#📌-define-your-own-backend)
+    - [📂 Example projects](#📂-example-projects)
+    - [Contribute](#contribute)
+
+<!-- markdown-toc end -->
+
 ## 🔨 Quickstart
 
 ```elisp
@@ -24,7 +36,7 @@ left/right side of the buffer window.
         sideline-priority 100))                ; overlays' priority
 ```
 
-### Configure backends
+### 👥 Configure backends
 
 The most basic way to set up the backends for sideline.
 
