@@ -56,13 +56,13 @@
   "Display order on the left sidelines."
   :type '(choice (const :tag "Search up" up)
                  (const :tag "Search down" down))
-  :group 'line-reminder)
+  :group 'sideline)
 
 (defcustom sideline-order-right 'up
   "Display order on the right sidelines."
   :type '(choice (const :tag "Search up" up)
                  (const :tag "Search down" down))
-  :group 'line-reminder)
+  :group 'sideline)
 
 (defface sideline-default
   '((((background light)) :foreground "DarkOrange")
