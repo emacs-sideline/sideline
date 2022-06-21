@@ -12,6 +12,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 * Add variable to delay sideline renderer (638fb873d6071eadac798b92dd212889df45f7e3)
 * Don't color face when there is text property (629a21184552687f5b2ea7a378f0c363f0bd379a)
 * Accept cons cell for `backends` variables (1f628103d24c8871396da1405915b5104c26a203)
+* Calculate string length in pixel instead (bf375ac2b659e0312bc5a3a67aded4d3569c0b51)
 
 ## 0.1.1
 > Released Jun 15, 2022
