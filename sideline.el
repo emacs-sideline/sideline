@@ -333,7 +333,7 @@ FACE, ON-LEFT, and ORDER for details."
               (add-text-properties 0 len-cand `(keymap ,keymap mouse-face highlight) candidate)))
           (if on-left (format sideline-format-left candidate)
             (format sideline-format-right candidate))))
-       (len-title (length title))
+       (len-title (sideline--str-len title))
        (pos-ov (sideline--find-line len-title on-left order))
        (pos-start (car pos-ov)) (pos-end (cdr pos-ov))
        (offset (if (or on-left (zerop (window-hscroll))) 0
