@@ -120,9 +120,6 @@
   :type 'function
   :group 'sideline)
 
-(defconst sideline-char-width (string-pixel-width " ")
-  "Holds the system character width.")
-
 (defvar-local sideline--overlays nil
   "Displayed overlays.")
 
@@ -181,9 +178,10 @@
 
 (defun sideline--str-len (str)
   "Calculate STR in pixel width."
-  (let ((len (string-pixel-width str)))
-    (+ (/ len sideline-char-width)
-       (if (zerop (% len sideline-char-width)) 0 1))))  ; add one if exceeed
+  (let ((width (string-pixel-width " "))
+        (len (string-pixel-width str)))
+    (+ (/ len width)
+       (if (zerop (% len width)) 0 1))))  ; add one if exceeed
 
 (defun sideline--kill-timer (timer)
   "Kill TIMER."
