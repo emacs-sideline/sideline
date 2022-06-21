@@ -44,7 +44,7 @@ Alternatively, you could set it to cons cell with the search order.
                                   (sideline-flycheck . down))))
 ```
 
-[![](./etc/1.png)](#)
+<img src="./etc/1.png" width="60%"/>
 
 ## 📌 Define your own backend
 
