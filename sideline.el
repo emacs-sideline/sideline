@@ -319,11 +319,11 @@ Argument CANDIDATE is the data for users."
   "Clean up all overlays."
   (mapc #'delete-overlay sideline--overlays))
 
-(defun sideline--create-ov (candidate action face on-left)
+(defun sideline--create-ov (candidate action face on-left order)
   "Create information (CANDIDATE) overlay.
 
 See function `sideline--render-candidates' document string for arguments ACTION,
-FACE, and ON-LEFT for details."
+FACE, ON-LEFT, and ORDER for details."
   (when-let*
       ((len-cand (length candidate))
        (title
@@ -344,8 +344,7 @@ FACE, and ON-LEFT for details."
                            `cursor t))
              (propertize title 'display (sideline--compute-height))))
        (len-str (length str))
-       (pos-ov (sideline--find-line len-title on-left (if on-left sideline-order-left
-                                                        sideline-order-right))))
+       (pos-ov (sideline--find-line len-title on-left order)))
     ;; Create overlay
     (let* ((pos-start (car pos-ov)) (pos-end (cdr pos-ov))
            (empty-ln (= pos-start pos-end))
@@ -365,7 +364,7 @@ FACE, and ON-LEFT for details."
 ;; (@* "Async" )
 ;;
 
-(defun sideline--render-candidates (candidates action face on-left)
+(defun sideline--render-candidates (candidates action face on-left order)
   "Render a list of backends (CANDIDATES).
 
 Argument ACTION is the code action callback.
@@ -373,10 +372,13 @@ Argument ACTION is the code action callback.
 Argument FACE is optional face to render text; default face is
 `sideline-default'.
 
-Argument ON-LEFT is a flag indicates rendering alignment."
+Argument ON-LEFT is a flag indicates rendering alignment; if it's non-nil then
+we align to the left, otherwise to the right.
+
+Argument ORDER determined the search order for going up or down."
   (let ((inhibit-field-text-motion t))
     (dolist (candidate candidates)
-      (sideline--create-ov candidate action face on-left))))
+      (sideline--create-ov candidate action face on-left order))))
 
 ;;
 ;; (@* "Core" )
@@ -390,18 +392,23 @@ Argument ON-LEFT is a flag indicates rendering alignment."
   "Render a list of BACKENDS.
 
 If argument ON-LEFT is non-nil, it will align to the left instead of right."
-  (dolist (backend backends)
-    (let ((candidates (sideline--call-backend backend 'candidates))
-          (action (sideline--call-backend backend 'action))
-          (face (or (sideline--call-backend backend 'face) 'sideline-default))
-          (buffer (current-buffer)))  ; for async check
+  (dolist (data backends)
+    (let* ((is-cons (consp data))
+           (backend (if is-cons (car data) data))
+           (order (if is-cons (cdr data)  ; configured
+                    ;; fallback to default
+                    (if on-left sideline-order-left sideline-order-right)))
+           (candidates (sideline--call-backend backend 'candidates))
+           (action (sideline--call-backend backend 'action))
+           (face (or (sideline--call-backend backend 'face) 'sideline-default))
+           (buffer (current-buffer)))  ; for async check
       (if (eq (car candidates) :async)
           (funcall (cdr candidates)
                    (lambda (cands &rest _)
                      (sideline--with-buffer buffer
                        (when sideline-mode
-                         (sideline--render-candidates cands action face on-left)))))
-        (sideline--render-candidates candidates action face on-left)))))
+                         (sideline--render-candidates cands action face on-left order)))))
+        (sideline--render-candidates candidates action face on-left order)))))
 
 (defun sideline-stop-p ()
   "Return non-nil if the sideline should not be display."
