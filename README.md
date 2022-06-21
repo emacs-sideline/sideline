@@ -35,6 +35,10 @@ The most basic way to set up the backends for sideline.
         sideline-backends-right '(sideline-lsp)))
 ```
 
+<p align="center">
+<img src="./etc/1.png" width="70%"/>
+</p>
+
 Alternatively, you could set it to cons cell with the search order.
 
 ```elisp
@@ -45,7 +49,7 @@ Alternatively, you could set it to cons cell with the search order.
 ```
 
 <p align="center">
-<img src="./etc/1.png" width="70%"/>
+<img src="./etc/2.png" width="70%"/>
 </p>
 
 ## 📌 Define your own backend
