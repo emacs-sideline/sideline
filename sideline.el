@@ -224,7 +224,13 @@
 
 (defun sideline--window-width ()
   "Correct window width for sideline."
-  (window-max-chars-per-line))
+  (- (window-max-chars-per-line)
+     (sideline--margin-width)
+     (or (and (>= emacs-major-version 27)
+              ;; We still need this number when calculating available space
+              ;; even with emacs >= 27
+              (sideline--line-number-display-width))
+         0)))
 
 (defun sideline--align (&rest lengths)
   "Align sideline string by LENGTHS from the right of the window."
@@ -341,21 +347,9 @@ FACE, ON-LEFT, and ORDER for details."
        (margin (sideline--margin-width))
        (str (concat
              (unless on-left
-               ;; (propertize " " 'display `((space :align-to (- right ,(sideline--align (1- len-title) margin offset)))
-               ;;                            (space :width 0))
-               ;;             `cursor t)
-               (let* ((column-start (window-hscroll))
-                      (right-edge (+ column-start (sideline--window-width)))
-                      (end-column (save-excursion
-                                    (goto-char pos-start)
-                                    (goto-char (line-end-position))
-                                    (current-column)))
-                      (hidden-spaces (max (- column-start end-column) 0))
-                      (left-edge (max end-column column-start))
-                      (gap (+ (- right-edge left-edge len-title) hidden-spaces)))
-                 (message "%s %s %s" right-edge left-edge candidate)
-                 (propertize (spaces-string gap) `cursor t)
-                 ))
+               (propertize " " 'display `((space :align-to (- right ,(sideline--align (1- len-title) margin offset)))
+                                          (space :width 0))
+                           `cursor t))
              title)))
     ;; Create overlay
     (let* ((len-str (length str))
