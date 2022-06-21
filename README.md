@@ -19,12 +19,32 @@ left/right side of the buffer window.
   (setq sideline-backends-skip-current-line t  ; don't display on current line
         sideline-order-left 'down              ; or 'up
         sideline-order-right 'up               ; or 'down
-        sideline-backends-left '(...)          ; backends display on the left
-        sideline-backends-right '(...)         ; backends display on the right
         sideline-format-left "%s   "           ; format for left aligment
         sideline-format-right "   %s"          ; format for right aligment
         sideline-priority 100))                ; overlays' priority
 ```
+
+### Configure backends
+
+The most basic way to set up the backends for sideline.
+
+```elisp
+(leaf sideline
+  :init
+  (setq sideline-backends-left '(sideline-flycheck)
+        sideline-backends-right '(sideline-lsp)))
+```
+
+Alternatively, you could set it to cons cell with the search order.
+
+```elisp
+(leaf sideline
+  :init
+  (setq sideline-backends-right '((sideline-lsp      . up)
+                                  (sideline-flycheck . down))))
+```
+
+[![](./etc/1.png)](#)
 
 ## 📌 Define your own backend
 
