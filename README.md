@@ -4,7 +4,7 @@
 # sideline
 > Show informations on the side
 
-[![CI](https://github.com/jcs-elpa/sideline/actions/workflows/test.yml/badge.svg)](https://github.com/jcs-elpa/sideline/actions/workflows/test.yml)
+[![CI](https://github.com/emacs-sideline/sideline/actions/workflows/test.yml/badge.svg)](https://github.com/emacs-sideline/sideline/actions/workflows/test.yml)
 
 This library provides the frontend UI to display information either on the
 left/right side of the buffer window.
