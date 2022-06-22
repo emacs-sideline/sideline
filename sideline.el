@@ -176,6 +176,10 @@
   `(when (buffer-live-p ,buffer-or-name)
      (with-current-buffer ,buffer-or-name ,@body)))
 
+(defun sideline--kill-timer (timer)
+  "Kill TIMER."
+  (when (timerp timer) (cancel-timer timer)))
+
 (defun sideline--str-len (str)
   "Calculate STR in pixel width."
   (let ((width (window-font-width))
@@ -183,13 +187,11 @@
     (+ (/ len width)
        (if (zerop (% len width)) 0 1))))  ; add one if exceeed
 
-(defun sideline--kill-timer (timer)
-  "Kill TIMER."
-  (when (timerp timer) (cancel-timer timer)))
-
-(defun sideline--column-to-point (column)
-  "Convert COLUMN to point."
-  (save-excursion (move-to-column column) (point)))
+(defun sideline--line-length ()
+  "Return the length of current line."
+  (sidelinde--apply-text-scale
+   (sideline--str-len
+    (buffer-substring (line-beginning-position) (line-end-position)))))
 
 (defun sideline--line-number-display-width ()
   "Safe way to get value from function `line-number-display-width'."
@@ -197,52 +199,23 @@
       (+ (or (ignore-errors (line-number-display-width)) 0) 2)
     0))
 
-(defun sideline--margin-width ()
-  "General calculation of margin width."
-  (+ (if fringes-outside-margins right-margin-width 0)
-     (or (and (boundp 'fringe-mode)
-              (consp fringe-mode)
-              (or (equal (car fringe-mode) 0)
-                  (equal (cdr fringe-mode) 0))
-              1)
-         (and (boundp 'fringe-mode) (equal fringe-mode 0) 1)
-         0)
-     (let ((win-fringes (window-fringes)))
-       (if (or (equal (car win-fringes) 0)
-               (equal (cadr win-fringes) 0))
-           2
-         0))
-     (if (< emacs-major-version 27)
-         ;; This was necessary with emacs < 27, recent versions take
-         ;; into account the display-line width with :align-to
-         (sideline--line-number-display-width)
-       0)
-     (if (or (bound-and-true-p whitespace-mode)
-             (bound-and-true-p global-whitespace-mode))
-         1
-       0)))
-
 (defun sideline--window-width ()
   "Correct window width for sideline."
-  (- (window-max-chars-per-line)
-     (sideline--margin-width)
-     (or (and (>= emacs-major-version 27)
-              ;; We still need this number when calculating available space
-              ;; even with emacs >= 27
-              (sideline--line-number-display-width))
-         0)))
+  (window-max-chars-per-line))
 
 (defun sideline--compute-height ()
   "Return a fixed size for text in sideline."
-  (if (null text-scale-mode-remapping)
-      1
+  (if (null text-scale-mode-remapping) 1
     ;; Readjust height when text-scale-mode is used
-    (or (plist-get (cdar text-scale-mode-remapping) :height)
-        1)))
+    (or (plist-get (cdar text-scale-mode-remapping) :height) 1)))
+
+(defun sidelinde--apply-text-scale (val)
+  "Calculate VAL with text-scale applied."
+  (ceiling (/ (float val) (sideline--compute-height))))
 
 (defun sideline--window-hscroll ()
   "Return correct hscroll."
-  (ceiling (/ (float (window-hscroll)) (sideline--compute-height))))
+  (sidelinde--apply-text-scale (window-hscroll)))
 
 (defun sideline--calc-space (str-len on-left)
   "Calculate space in current line.
@@ -252,18 +225,18 @@ Argument STR-LEN is the string size.
 If argument ON-LEFT is non-nil, we calculate to the left side.  Otherwise,
 calculate to the right side."
   (if on-left
-      (let ((column-start (sideline--window-hscroll))
+      (let ((left-edge (sideline--window-hscroll))
             (pos-first (save-excursion (back-to-indentation) (current-column)))
-            (pos-end (save-excursion (end-of-line) (current-column))))
-        (cond ((< str-len (- pos-first column-start))
-               (cons column-start pos-first))
-              ((= pos-first pos-end)
-               (cons column-start (sideline--window-width)))))
-    (let* ((column-start (sideline--window-hscroll))
-           (column-end (+ column-start (sideline--window-width)))
-           (pos-end (save-excursion (end-of-line) (current-column))))
-      (when (< str-len (- column-end pos-end))
-        (cons column-end pos-end)))))
+            (line-len (sideline--line-length)))
+        (cond ((< str-len (- pos-first left-edge))
+               (cons (line-beginning-position) pos-first))
+              ((= pos-first line-len)
+               (cons (line-beginning-position) (line-beginning-position)))))
+    (let* ((left-edge (sideline--window-hscroll))
+           (right-edge (+ left-edge (sideline--window-width)))
+           (line-len (sideline--line-length)))
+      (when (< str-len (- right-edge line-len))
+        (cons (line-end-position) (line-end-position))))))
 
 (defun sideline--find-line (str-len on-left &optional direction exceeded)
   "Find a line where the string can be inserted.
@@ -292,10 +265,9 @@ available lines in both directions (up & down)."
           (setq break-it t))
         (when (and (not (memq (line-beginning-position) occupied-lines))
                    (not break-it))
-          (when-let ((col (sideline--calc-space str-len on-left)))
-            (setq pos-ov (cons (sideline--column-to-point (car col))
-                               (sideline--column-to-point (cdr col))))
-            (setq break-it t)
+          (when-let ((result (sideline--calc-space str-len on-left)))
+            (setq pos-ov result
+                  break-it t)
             (push (line-beginning-position) occupied-lines)))
         (when (if going-up (bobp) (eobp)) (setq break-it t))))
     (if on-left
@@ -319,6 +291,15 @@ Argument CANDIDATE is the data for users."
 ;;
 ;; (@* "Overlays" )
 ;;
+
+(defun sideline--overlays-in (prop name &optional beg end)
+  "Return overlays with PROP of NAME, from region BEG to END."
+  (let* ((beg (or beg (line-beginning-position)))
+         (end (or end (line-end-position)))
+         (ovs (overlays-in beg end))
+         lst)
+    (dolist (ov ovs) (when (eq name (overlay-get ov prop)) (push ov lst)))
+    lst))
 
 (defun sideline--delete-ovs ()
   "Clean up all overlays."
@@ -344,23 +325,33 @@ FACE, ON-LEFT, and ORDER for details."
        (pos-ov (sideline--find-line len-title on-left order))
        (pos-start (car pos-ov)) (pos-end (cdr pos-ov))
        (str (concat
-             (unless on-left
-               (let* ((column-start (sideline--window-hscroll))
-                      (right-edge (+ column-start (window-max-chars-per-line)))
-                      (line-len (save-excursion
-                                  (goto-char pos-start)
-                                  (sideline--str-len (buffer-substring (line-beginning-position) (line-end-position)))))
-                      (hidden-spaces (max (- column-start line-len) 0))
-                      (left-edge (max line-len column-start))
-                      (gap (max (+ (- right-edge left-edge len-title) hidden-spaces)
-                                0)))
-                 (propertize (spaces-string gap) `cursor t)))
+             (propertize
+              (if on-left
+                  (spaces-string (sideline--window-hscroll))
+                (let* ((column-start (sideline--window-hscroll))
+                       (right-edge (+ column-start (sideline--window-width)))
+                       (line-len (save-excursion
+                                   (goto-char pos-start)
+                                   (sideline--line-length)))
+                       (hidden-spaces (max (- column-start line-len) 0))
+                       (left-edge (max line-len column-start))
+                       (gap (max (+ (- right-edge left-edge len-title) hidden-spaces)
+                                 0)))
+                  (spaces-string gap)))
+              `cursor t)
              title)))
     ;; Create overlay
     (let* ((len-str (length str))
            (empty-ln (= pos-start pos-end))
            (ov (make-overlay pos-start (if empty-ln pos-start (+ pos-start len-str))
                              nil t t)))
+      (save-excursion
+        (goto-char pos-start)
+        (when-let ((oov (nth 0 (sideline--overlays-in 'creator 'sideline))))
+          (setq str (substring str (sideline--str-len (overlay-get oov 'after-string))))
+          (move-overlay oov pos-start pos-end)
+          (unless (overlay-get oov 'on-left)
+            (overlay-put oov 'after-string (substring (overlay-get oov 'after-string) len-str)))))
       (cond (on-left
              (if empty-ln
                  (overlay-put ov 'after-string str)
@@ -369,6 +360,8 @@ FACE, ON-LEFT, and ORDER for details."
             (t (overlay-put ov 'after-string str)))
       (overlay-put ov 'window (get-buffer-window))
       (overlay-put ov 'priority sideline-priority)
+      (overlay-put ov 'on-left on-left)
+      (overlay-put ov 'creator 'sideline)
       (push ov sideline--overlays))))
 
 ;;
