@@ -123,7 +123,7 @@
 (defvar-local sideline--overlays nil
   "Displayed overlays.")
 
-(defvar-local sideline--last-bound-or-point nil
+(defvar-local sideline--ex-bound-or-point nil
   "Record of last bound; if this isn't the same, clean up overlays.")
 
 (defvar-local sideline--occupied-lines-left nil
@@ -141,7 +141,7 @@
 
 (defun sideline--enable ()
   "Enable `sideline' in current buffer."
-  (setq sideline--last-bound-or-point t  ; render immediately
+  (setq sideline--ex-bound-or-point t  ; render immediately
         sideline--text-scale-mode-amount text-scale-mode-amount)
   (add-hook 'post-command-hook #'sideline--post-command nil t))
 
@@ -175,13 +175,6 @@
   (declare (indent 1) (debug t))
   `(when (buffer-live-p ,buffer-or-name)
      (with-current-buffer ,buffer-or-name ,@body)))
-
-(defun sideline--str-len (str)
-  "Calculate STR in pixel width."
-  (let ((width (window-font-width))
-        (len (string-pixel-width str)))
-    (+ (/ len width)
-       (if (zerop (% len width)) 0 1))))  ; add one if exceeed
 
 (defun sideline--kill-timer (timer)
   "Kill TIMER."
@@ -232,10 +225,13 @@
               (sideline--line-number-display-width))
          0)))
 
-(defun sideline--align (&rest lengths)
-  "Align sideline string by LENGTHS from the right of the window."
-  (list (* (window-font-width)
-           (+ (apply #'+ lengths) (if (display-graphic-p) 1 2)))))
+(defun sideline--compute-height ()
+  "Return a fixed size for text in sideline."
+  (if (null text-scale-mode-remapping)
+      1
+    ;; Readjust height when text-scale-mode is used
+    (or (plist-get (cdar text-scale-mode-remapping) :height)
+        1)))
 
 (defun sideline--calc-space (str-len on-left)
   "Calculate space in current line.
@@ -333,23 +329,22 @@ FACE, ON-LEFT, and ORDER for details."
               (add-text-properties 0 len-cand `(keymap ,keymap mouse-face highlight) candidate)))
           (if on-left (format sideline-format-left candidate)
             (format sideline-format-right candidate))))
-       (len-title (sideline--str-len title))
+       (len-title (length title))
        (pos-ov (sideline--find-line len-title on-left order))
        (pos-start (car pos-ov)) (pos-end (cdr pos-ov))
-       (offset (if (or on-left (zerop (window-hscroll))) 0
-                 (save-excursion
-                   (goto-char pos-start)
-                   (goto-char (line-end-position))
-                   (cond ((zerop (current-column)) 0)
-                         ((<= (current-column) (window-hscroll))
-                          (- 0 (current-column)))
-                         (t (- 0 (window-hscroll)))))))
-       (margin (sideline--margin-width))
        (str (concat
              (unless on-left
-               (propertize " " 'display `((space :align-to (- right ,(sideline--align (1- len-title) margin offset)))
-                                          (space :width 0))
-                           `cursor t))
+               (let* ((column-start (ceiling (/ (float (window-hscroll))
+                                                (sideline--compute-height))))
+                      (right-edge (+ column-start (window-max-chars-per-line)))
+                      (end-column (save-excursion
+                                    (goto-char pos-start)
+                                    (goto-char (line-end-position))
+                                    (current-column)))
+                      (hidden-spaces (max (- column-start end-column) 0))
+                      (left-edge (max end-column column-start))
+                      (gap (+ (- right-edge left-edge len-title) hidden-spaces)))
+                 (propertize (spaces-string gap) `cursor t)))
              title)))
     ;; Create overlay
     (let* ((len-str (length str))
@@ -440,14 +435,27 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
 (defvar-local sideline--delay-timer nil
   "Timer for delay.")
 
+(defvar-local sideline--ex-window-start nil
+  "Holds previouse window start point; this will detect vertical scrolling.")
+
+(defvar-local sideline--ex-window-hscroll nil
+  "Holds previouse window hscroll; this will detect horizontal scrolling.")
+
 (defun sideline--do-render-p ()
   "Return non-nil if we should re-render sidelines in the post-command."
-  (let ((bound-or-point (or (bounds-of-thing-at-point 'symbol) (point))))
-    (when (or (not (equal sideline--last-bound-or-point bound-or-point))
-              (not (equal sideline--text-scale-mode-amount text-scale-mode-amount)))
+  (let ((bound-or-point (or (bounds-of-thing-at-point 'symbol) (point)))
+        (win-start (window-start))
+        (win-hscroll (window-hscroll)))
+    (when  ; conditions allow to re-render sidelines
+        (or (not (equal sideline--ex-bound-or-point bound-or-point))
+            (not (equal sideline--text-scale-mode-amount text-scale-mode-amount))
+            (not (equal sideline--ex-window-start win-start))
+            (not (equal sideline--ex-window-hscroll win-hscroll)))
       ;; update
-      (setq sideline--last-bound-or-point bound-or-point
-            sideline--text-scale-mode-amount text-scale-mode-amount)
+      (setq sideline--ex-bound-or-point bound-or-point
+            sideline--text-scale-mode-amount text-scale-mode-amount
+            sideline--ex-window-start win-start
+            sideline--ex-window-hscroll win-hscroll)
       t)))
 
 (defun sideline--post-command ()
@@ -461,7 +469,7 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
 
 (defun sideline--reset ()
   "Clean up for next use."
-  (setq sideline--last-bound-or-point nil)
+  (setq sideline--ex-bound-or-point nil)
   (sideline--delete-ovs))
 
 (provide 'sideline)
