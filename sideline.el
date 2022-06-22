@@ -176,6 +176,13 @@
   `(when (buffer-live-p ,buffer-or-name)
      (with-current-buffer ,buffer-or-name ,@body)))
 
+(defun sideline--str-len (str)
+  "Calculate STR in pixel width."
+  (let ((width (window-font-width))
+        (len (string-pixel-width (substring-no-properties str))))
+    (+ (/ len width)
+       (if (zerop (% len width)) 0 1))))  ; add one if exceeed
+
 (defun sideline--kill-timer (timer)
   "Kill TIMER."
   (when (timerp timer) (cancel-timer timer)))
@@ -233,6 +240,10 @@
     (or (plist-get (cdar text-scale-mode-remapping) :height)
         1)))
 
+(defun sideline--window-hscroll ()
+  "Return correct hscroll."
+  (ceiling (/ (float (window-hscroll)) (sideline--compute-height))))
+
 (defun sideline--calc-space (str-len on-left)
   "Calculate space in current line.
 
@@ -241,14 +252,14 @@ Argument STR-LEN is the string size.
 If argument ON-LEFT is non-nil, we calculate to the left side.  Otherwise,
 calculate to the right side."
   (if on-left
-      (let ((column-start (window-hscroll))
+      (let ((column-start (sideline--window-hscroll))
             (pos-first (save-excursion (back-to-indentation) (current-column)))
             (pos-end (save-excursion (end-of-line) (current-column))))
         (cond ((< str-len (- pos-first column-start))
                (cons column-start pos-first))
               ((= pos-first pos-end)
                (cons column-start (sideline--window-width)))))
-    (let* ((column-start (window-hscroll))
+    (let* ((column-start (sideline--window-hscroll))
            (column-end (+ column-start (sideline--window-width)))
            (pos-end (save-excursion (end-of-line) (current-column))))
       (when (< str-len (- column-end pos-end))
@@ -329,21 +340,20 @@ FACE, ON-LEFT, and ORDER for details."
               (add-text-properties 0 len-cand `(keymap ,keymap mouse-face highlight) candidate)))
           (if on-left (format sideline-format-left candidate)
             (format sideline-format-right candidate))))
-       (len-title (length title))
+       (len-title (sideline--str-len title))
        (pos-ov (sideline--find-line len-title on-left order))
        (pos-start (car pos-ov)) (pos-end (cdr pos-ov))
        (str (concat
              (unless on-left
-               (let* ((column-start (ceiling (/ (float (window-hscroll))
-                                                (sideline--compute-height))))
+               (let* ((column-start (sideline--window-hscroll))
                       (right-edge (+ column-start (window-max-chars-per-line)))
-                      (end-column (save-excursion
-                                    (goto-char pos-start)
-                                    (goto-char (line-end-position))
-                                    (current-column)))
-                      (hidden-spaces (max (- column-start end-column) 0))
-                      (left-edge (max end-column column-start))
-                      (gap (+ (- right-edge left-edge len-title) hidden-spaces)))
+                      (line-len (save-excursion
+                                  (goto-char pos-start)
+                                  (sideline--str-len (buffer-substring (line-beginning-position) (line-end-position)))))
+                      (hidden-spaces (max (- column-start line-len) 0))
+                      (left-edge (max line-len column-start))
+                      (gap (max (+ (- right-edge left-edge len-title) hidden-spaces)
+                                0)))
                  (propertize (spaces-string gap) `cursor t)))
              title)))
     ;; Create overlay
