@@ -15,7 +15,7 @@ install:
 
 compile:
 	@echo "Compiling..."
-	$(EASK) compile
+	$(EASK) compile --strict
 
 test:
 	@echo "Testing..."
