@@ -189,7 +189,7 @@
 
 (defun sideline--line-length ()
   "Return the length of current line."
-  (sidelinde--apply-text-scale
+  (sideline--apply-text-scale
    (sideline--str-len
     (buffer-substring (line-beginning-position) (line-end-position)))))
 
@@ -209,13 +209,13 @@
     ;; Readjust height when text-scale-mode is used
     (or (plist-get (cdar text-scale-mode-remapping) :height) 1)))
 
-(defun sidelinde--apply-text-scale (val)
+(defun sideline--apply-text-scale (val)
   "Calculate VAL with text-scale applied."
   (ceiling (/ (float val) (sideline--compute-height))))
 
 (defun sideline--window-hscroll ()
   "Return correct hscroll."
-  (sidelinde--apply-text-scale (window-hscroll)))
+  (sideline--apply-text-scale (window-hscroll)))
 
 (defun sideline--calc-space (str-len on-left)
   "Calculate space in current line.
@@ -348,9 +348,9 @@ FACE, ON-LEFT, and ORDER for details."
       (save-excursion
         (goto-char pos-start)
         (when-let ((oov (nth 0 (sideline--overlays-in 'creator 'sideline))))
-          (setq str (substring str (sideline--str-len (overlay-get oov 'after-string))))
           (move-overlay oov pos-start pos-end)
-          (unless (overlay-get oov 'on-left)
+          (if (overlay-get oov 'on-left)
+              (setq str (substring str (sideline--str-len (overlay-get oov 'after-string))))
             (overlay-put oov 'after-string (substring (overlay-get oov 'after-string) len-str)))))
       (cond (on-left
              (if empty-ln
