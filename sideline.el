@@ -182,22 +182,18 @@
 
 (defun sideline--str-len (str)
   "Calculate STR in pixel width."
-  (let ((width (window-font-width))
+  (let ((width (string-pixel-width " "))
         (len (string-pixel-width (substring-no-properties str))))
     (+ (/ len width)
        (if (zerop (% len width)) 0 1))))  ; add one if exceeed
 
+(defun sideline--line-str ()
+  "Return line string."
+  (buffer-substring (line-beginning-position) (line-end-position)))
+
 (defun sideline--line-length ()
   "Return the length of current line."
-  (sideline--apply-text-scale
-   (sideline--str-len
-    (buffer-substring (line-beginning-position) (line-end-position)))))
-
-(defun sideline--line-number-display-width ()
-  "Safe way to get value from function `line-number-display-width'."
-  (if (bound-and-true-p display-line-numbers-mode)
-      (+ (or (ignore-errors (line-number-display-width)) 0) 2)
-    0))
+  (sideline--str-len (sideline--line-str)))
 
 (defun sideline--window-width ()
   "Correct window width for sideline."
