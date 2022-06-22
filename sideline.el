@@ -197,7 +197,7 @@
 
 (defun sideline--window-width ()
   "Correct window width for sideline."
-  (window-max-chars-per-line))
+  (+ (window-max-chars-per-line) text-scale-mode-amount))
 
 (defun sideline--compute-height ()
   "Return a fixed size for text in sideline."
@@ -220,6 +220,9 @@ Argument STR-LEN is the string size.
 
 If argument ON-LEFT is non-nil, we calculate to the left side.  Otherwise,
 calculate to the right side."
+  ;; TODO: This doesn't calculate the overlay on the left, it will cause
+  ;; overlaps if the window width is too narrow and doesn't have enough space
+  ;; to display to the overlays (left & right)
   (if on-left
       (let ((left-edge (sideline--window-hscroll))
             (pos-first (save-excursion (back-to-indentation) (current-column)))
@@ -343,16 +346,24 @@ FACE, ON-LEFT, and ORDER for details."
                              nil t t)))
       (save-excursion
         (goto-char pos-start)
+        ;; If another overlay (left/right) exists, we move that overlay
+        ;; to the correct position.
         (when-let ((oov (nth 0 (sideline--overlays-in 'creator 'sideline))))
           (move-overlay oov pos-start pos-end)
           (if (overlay-get oov 'on-left)
+              ;; Tweak the overlay on the right, so it doesn't go exceeed to
+              ;; the right border
               (setq str (substring str (sideline--str-len (overlay-get oov 'after-string))))
+            ;; Move the overlay on the left, so it doesn't get pushed by the
+            ;; current created overlay (right).
+            ;;
+            ;; This is simply re-ordering the overlay!
             (overlay-put oov 'after-string (substring (overlay-get oov 'after-string) len-str)))))
       (cond (on-left
              (if empty-ln
                  (overlay-put ov 'after-string str)
                (overlay-put ov 'display str)
-               (overlay-put ov 'invisible t)))
+               (overlay-put ov 'invisible t)))  ; don't push the text to the right
             (t (overlay-put ov 'after-string str)))
       (overlay-put ov 'window (get-buffer-window))
       (overlay-put ov 'priority sideline-priority)
