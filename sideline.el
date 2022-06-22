@@ -4,7 +4,7 @@
 ;; Created date 2022-06-13 22:08:26
 
 ;; Author: Shen, Jen-Chieh <jcs090218@gmail.com>
-;; URL: https://github.com/jcs-elpa/sideline
+;; URL: https://github.com/emacs-sideline/sideline
 ;; Version: 0.1.1
 ;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: sideline
@@ -40,7 +40,7 @@
   "Show informations on the side."
   :prefix "sideline-"
   :group 'tool
-  :link '(url-link :tag "Repository" "https://github.com/jcs-elpa/sideline"))
+  :link '(url-link :tag "Repository" "https://github.com/emacs-sideline/sideline"))
 
 (defcustom sideline-backends-left nil
   "The list of active backends to display sideline on the left."
