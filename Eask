@@ -2,7 +2,7 @@
          "0.1.1"
          "Show informations on the side")
 
-(website-url "https://github.com/jcs-elpa/sideline")
+(website-url "https://github.com/emacs-sideline/sideline")
 (keywords "sideline")
 
 (package-file "sideline.el")
