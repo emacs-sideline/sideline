@@ -6,7 +6,7 @@
 ;; Author: Shen, Jen-Chieh <jcs090218@gmail.com>
 ;; URL: https://github.com/emacs-sideline/sideline
 ;; Version: 0.1.1
-;; Package-Requires: ((emacs "26.1"))
+;; Package-Requires: ((emacs "29"))
 ;; Keywords: sideline
 
 ;; This file is NOT part of GNU Emacs.
@@ -123,7 +123,7 @@
 (defvar-local sideline--overlays nil
   "Displayed overlays.")
 
-(defvar-local sideline--last-bound-or-point nil
+(defvar-local sideline--ex-bound-or-point nil
   "Record of last bound; if this isn't the same, clean up overlays.")
 
 (defvar-local sideline--occupied-lines-left nil
@@ -141,7 +141,7 @@
 
 (defun sideline--enable ()
   "Enable `sideline' in current buffer."
-  (setq sideline--last-bound-or-point t  ; render immediately
+  (setq sideline--ex-bound-or-point t  ; render immediately
         sideline--text-scale-mode-amount text-scale-mode-amount)
   (add-hook 'post-command-hook #'sideline--post-command nil t))
 
@@ -176,66 +176,42 @@
   `(when (buffer-live-p ,buffer-or-name)
      (with-current-buffer ,buffer-or-name ,@body)))
 
-(defun sideline--str-len (str)
-  "Calculate STR in pixel width."
-  (let ((width (window-font-width))
-        (len (string-pixel-width str)))
-    (+ (/ len width)
-       (if (zerop (% len width)) 0 1))))  ; add one if exceeed
-
 (defun sideline--kill-timer (timer)
   "Kill TIMER."
   (when (timerp timer) (cancel-timer timer)))
 
-(defun sideline--column-to-point (column)
-  "Convert COLUMN to point."
-  (save-excursion (move-to-column column) (point)))
+(defun sideline--str-len (str)
+  "Calculate STR in pixel width."
+  (let ((width (string-pixel-width " "))
+        (len (string-pixel-width (substring-no-properties str))))
+    (+ (/ len width)
+       (if (zerop (% len width)) 0 1))))  ; add one if exceeed
 
-(defun sideline--line-number-display-width ()
-  "Safe way to get value from function `line-number-display-width'."
-  (if (bound-and-true-p display-line-numbers-mode)
-      (+ (or (ignore-errors (line-number-display-width)) 0) 2)
-    0))
+(defun sideline--line-str ()
+  "Return line string."
+  (buffer-substring (line-beginning-position) (line-end-position)))
 
-(defun sideline--margin-width ()
-  "General calculation of margin width."
-  (+ (if fringes-outside-margins right-margin-width 0)
-     (or (and (boundp 'fringe-mode)
-              (consp fringe-mode)
-              (or (equal (car fringe-mode) 0)
-                  (equal (cdr fringe-mode) 0))
-              1)
-         (and (boundp 'fringe-mode) (equal fringe-mode 0) 1)
-         0)
-     (let ((win-fringes (window-fringes)))
-       (if (or (equal (car win-fringes) 0)
-               (equal (cadr win-fringes) 0))
-           2
-         0))
-     (if (< emacs-major-version 27)
-         ;; This was necessary with emacs < 27, recent versions take
-         ;; into account the display-line width with :align-to
-         (sideline--line-number-display-width)
-       0)
-     (if (or (bound-and-true-p whitespace-mode)
-             (bound-and-true-p global-whitespace-mode))
-         1
-       0)))
+(defun sideline--line-length ()
+  "Return the length of current line."
+  (sideline--str-len (sideline--line-str)))
 
 (defun sideline--window-width ()
   "Correct window width for sideline."
-  (- (window-max-chars-per-line)
-     (sideline--margin-width)
-     (or (and (>= emacs-major-version 27)
-              ;; We still need this number when calculating available space
-              ;; even with emacs >= 27
-              (sideline--line-number-display-width))
-         0)))
+  (+ (window-max-chars-per-line) text-scale-mode-amount))
 
-(defun sideline--align (&rest lengths)
-  "Align sideline string by LENGTHS from the right of the window."
-  (list (* (window-font-width)
-           (+ (apply #'+ lengths) (if (display-graphic-p) 1 2)))))
+(defun sideline--compute-height ()
+  "Return a fixed size for text in sideline."
+  (if (null text-scale-mode-remapping) 1
+    ;; Readjust height when text-scale-mode is used
+    (or (plist-get (cdar text-scale-mode-remapping) :height) 1)))
+
+(defun sideline--apply-text-scale (val)
+  "Calculate VAL with text-scale applied."
+  (ceiling (/ (float val) (sideline--compute-height))))
+
+(defun sideline--window-hscroll ()
+  "Return correct hscroll."
+  (sideline--apply-text-scale (window-hscroll)))
 
 (defun sideline--calc-space (str-len on-left)
   "Calculate space in current line.
@@ -244,19 +220,22 @@ Argument STR-LEN is the string size.
 
 If argument ON-LEFT is non-nil, we calculate to the left side.  Otherwise,
 calculate to the right side."
+  ;; TODO: This doesn't calculate the overlay on the left, it will cause
+  ;; overlaps if the window width is too narrow and doesn't have enough space
+  ;; to display to the overlays (left & right)
   (if on-left
-      (let ((column-start (window-hscroll))
+      (let ((left-edge (sideline--window-hscroll))
             (pos-first (save-excursion (back-to-indentation) (current-column)))
-            (pos-end (save-excursion (end-of-line) (current-column))))
-        (cond ((< str-len (- pos-first column-start))
-               (cons column-start pos-first))
-              ((= pos-first pos-end)
-               (cons column-start (sideline--window-width)))))
-    (let* ((column-start (window-hscroll))
-           (column-end (+ column-start (sideline--window-width)))
-           (pos-end (save-excursion (end-of-line) (current-column))))
-      (when (< str-len (- column-end pos-end))
-        (cons column-end pos-end)))))
+            (line-len (sideline--line-length)))
+        (cond ((< str-len (- pos-first left-edge))
+               (cons (line-beginning-position) pos-first))
+              ((= pos-first line-len)
+               (cons (line-beginning-position) (line-beginning-position)))))
+    (let* ((left-edge (sideline--window-hscroll))
+           (right-edge (+ left-edge (sideline--window-width)))
+           (line-len (sideline--line-length)))
+      (when (< str-len (- right-edge line-len))
+        (cons (line-end-position) (line-end-position))))))
 
 (defun sideline--find-line (str-len on-left &optional direction exceeded)
   "Find a line where the string can be inserted.
@@ -285,10 +264,9 @@ available lines in both directions (up & down)."
           (setq break-it t))
         (when (and (not (memq (line-beginning-position) occupied-lines))
                    (not break-it))
-          (when-let ((col (sideline--calc-space str-len on-left)))
-            (setq pos-ov (cons (sideline--column-to-point (car col))
-                               (sideline--column-to-point (cdr col))))
-            (setq break-it t)
+          (when-let ((result (sideline--calc-space str-len on-left)))
+            (setq pos-ov result
+                  break-it t)
             (push (line-beginning-position) occupied-lines)))
         (when (if going-up (bobp) (eobp)) (setq break-it t))))
     (if on-left
@@ -313,6 +291,15 @@ Argument CANDIDATE is the data for users."
 ;; (@* "Overlays" )
 ;;
 
+(defun sideline--overlays-in (prop name &optional beg end)
+  "Return overlays with PROP of NAME, from region BEG to END."
+  (let* ((beg (or beg (line-beginning-position)))
+         (end (or end (line-end-position)))
+         (ovs (overlays-in beg end))
+         lst)
+    (dolist (ov ovs) (when (eq name (overlay-get ov prop)) (push ov lst)))
+    lst))
+
 (defun sideline--delete-ovs ()
   "Clean up all overlays."
   (mapc #'delete-overlay sideline--overlays))
@@ -336,34 +323,52 @@ FACE, ON-LEFT, and ORDER for details."
        (len-title (sideline--str-len title))
        (pos-ov (sideline--find-line len-title on-left order))
        (pos-start (car pos-ov)) (pos-end (cdr pos-ov))
-       (offset (if (or on-left (zerop (window-hscroll))) 0
-                 (save-excursion
-                   (goto-char pos-start)
-                   (goto-char (line-end-position))
-                   (cond ((zerop (current-column)) 0)
-                         ((<= (current-column) (window-hscroll))
-                          (- 0 (current-column)))
-                         (t (- 0 (window-hscroll)))))))
-       (margin (sideline--margin-width))
        (str (concat
-             (unless on-left
-               (propertize " " 'display `((space :align-to (- right ,(sideline--align (1- len-title) margin offset)))
-                                          (space :width 0))
-                           `cursor t))
+             (propertize
+              (if on-left
+                  (spaces-string (sideline--window-hscroll))
+                (let* ((column-start (sideline--window-hscroll))
+                       (right-edge (+ column-start (sideline--window-width)))
+                       (line-len (save-excursion
+                                   (goto-char pos-start)
+                                   (sideline--line-length)))
+                       (hidden-spaces (max (- column-start line-len) 0))
+                       (left-edge (max line-len column-start))
+                       (gap (max (+ (- right-edge left-edge len-title) hidden-spaces)
+                                 0)))
+                  (spaces-string gap)))
+              `cursor t)
              title)))
     ;; Create overlay
     (let* ((len-str (length str))
            (empty-ln (= pos-start pos-end))
            (ov (make-overlay pos-start (if empty-ln pos-start (+ pos-start len-str))
                              nil t t)))
+      (save-excursion
+        (goto-char pos-start)
+        ;; If another overlay (left/right) exists, we move that overlay
+        ;; to the correct position.
+        (when-let ((oov (nth 0 (sideline--overlays-in 'creator 'sideline))))
+          (move-overlay oov pos-start pos-end)
+          (if (overlay-get oov 'on-left)
+              ;; Tweak the overlay on the right, so it doesn't go exceeed to
+              ;; the right border
+              (setq str (substring str (sideline--str-len (overlay-get oov 'after-string))))
+            ;; Move the overlay on the left, so it doesn't get pushed by the
+            ;; current created overlay (right).
+            ;;
+            ;; This is simply re-ordering the overlay!
+            (overlay-put oov 'after-string (substring (overlay-get oov 'after-string) len-str)))))
       (cond (on-left
              (if empty-ln
                  (overlay-put ov 'after-string str)
                (overlay-put ov 'display str)
-               (overlay-put ov 'invisible t)))
+               (overlay-put ov 'invisible t)))  ; don't push the text to the right
             (t (overlay-put ov 'after-string str)))
       (overlay-put ov 'window (get-buffer-window))
       (overlay-put ov 'priority sideline-priority)
+      (overlay-put ov 'on-left on-left)
+      (overlay-put ov 'creator 'sideline)
       (push ov sideline--overlays))))
 
 ;;
@@ -440,14 +445,27 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
 (defvar-local sideline--delay-timer nil
   "Timer for delay.")
 
+(defvar-local sideline--ex-window-start nil
+  "Holds previouse window start point; this will detect vertical scrolling.")
+
+(defvar-local sideline--ex-window-hscroll nil
+  "Holds previouse window hscroll; this will detect horizontal scrolling.")
+
 (defun sideline--do-render-p ()
   "Return non-nil if we should re-render sidelines in the post-command."
-  (let ((bound-or-point (or (bounds-of-thing-at-point 'symbol) (point))))
-    (when (or (not (equal sideline--last-bound-or-point bound-or-point))
-              (not (equal sideline--text-scale-mode-amount text-scale-mode-amount)))
+  (let ((bound-or-point (or (bounds-of-thing-at-point 'symbol) (point)))
+        (win-start (window-start))
+        (win-hscroll (window-hscroll)))
+    (when  ; conditions allow to re-render sidelines
+        (or (not (equal sideline--ex-bound-or-point bound-or-point))
+            (not (equal sideline--text-scale-mode-amount text-scale-mode-amount))
+            (not (equal sideline--ex-window-start win-start))
+            (not (equal sideline--ex-window-hscroll win-hscroll)))
       ;; update
-      (setq sideline--last-bound-or-point bound-or-point
-            sideline--text-scale-mode-amount text-scale-mode-amount)
+      (setq sideline--ex-bound-or-point bound-or-point
+            sideline--text-scale-mode-amount text-scale-mode-amount
+            sideline--ex-window-start win-start
+            sideline--ex-window-hscroll win-hscroll)
       t)))
 
 (defun sideline--post-command ()
@@ -461,7 +479,7 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
 
 (defun sideline--reset ()
   "Clean up for next use."
-  (setq sideline--last-bound-or-point nil)
+  (setq sideline--ex-bound-or-point nil)
   (sideline--delete-ovs))
 
 (provide 'sideline)
