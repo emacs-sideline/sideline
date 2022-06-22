@@ -124,7 +124,7 @@
 (defvar-local sideline--overlays nil
   "Displayed overlays.")
 
-(defvar-local sideline--last-bound-or-point nil
+(defvar-local sideline--ex-bound-or-point nil
   "Record of last bound; if this isn't the same, clean up overlays.")
 
 (defvar-local sideline--occupied-lines-left nil
@@ -142,7 +142,7 @@
 
 (defun sideline--enable ()
   "Enable `sideline' in current buffer."
-  (setq sideline--last-bound-or-point t  ; render immediately
+  (setq sideline--ex-bound-or-point t  ; render immediately
         sideline--text-scale-mode-amount text-scale-mode-amount)
   (add-hook 'post-command-hook #'sideline--post-command nil t))
 
@@ -441,14 +441,27 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
 (defvar-local sideline--delay-timer nil
   "Timer for delay.")
 
+(defvar-local sideline--ex-window-start nil
+  "Holds previouse window start point; this will detect vertical scrolling.")
+
+(defvar-local sideline--ex-window-hscroll nil
+  "Holds previouse window hscroll; this will detect horizontal scrolling.")
+
 (defun sideline--do-render-p ()
   "Return non-nil if we should re-render sidelines in the post-command."
-  (let ((bound-or-point (or (bounds-of-thing-at-point 'symbol) (point))))
-    (when (or (not (equal sideline--last-bound-or-point bound-or-point))
-              (not (equal sideline--text-scale-mode-amount text-scale-mode-amount)))
+  (let ((bound-or-point (or (bounds-of-thing-at-point 'symbol) (point)))
+        (win-start (window-start))
+        (win-hscroll (window-hscroll)))
+    (when  ; conditions allow to re-render sidelines
+        (or (not (equal sideline--ex-bound-or-point bound-or-point))
+            (not (equal sideline--text-scale-mode-amount text-scale-mode-amount))
+            (not (equal sideline--ex-window-start win-start))
+            (not (equal sideline--ex-window-hscroll win-hscroll)))
       ;; update
-      (setq sideline--last-bound-or-point bound-or-point
-            sideline--text-scale-mode-amount text-scale-mode-amount)
+      (setq sideline--ex-bound-or-point bound-or-point
+            sideline--text-scale-mode-amount text-scale-mode-amount
+            sideline--ex-window-start win-start
+            sideline--ex-window-hscroll win-hscroll)
       t)))
 
 (defun sideline--post-command ()
@@ -462,7 +475,7 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
 
 (defun sideline--reset ()
   "Clean up for next use."
-  (setq sideline--last-bound-or-point nil)
+  (setq sideline--ex-bound-or-point nil)
   (sideline--delete-ovs))
 
 (provide 'sideline)
