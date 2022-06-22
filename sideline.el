@@ -34,6 +34,7 @@
 (require 'cl-lib)
 (require 'face-remap)
 (require 'rect)
+(require 'shr)
 (require 'subr-x)
 
 (defgroup sideline nil
@@ -179,7 +180,7 @@
 (defun sideline--str-len (str)
   "Calculate STR in pixel width."
   (let ((width (window-font-width))
-        (len (string-pixel-width str)))
+        (len (shr-string-pixel-width str)))
     (+ (/ len width)
        (if (zerop (% len width)) 0 1))))  ; add one if exceeed
 
