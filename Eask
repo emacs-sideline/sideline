@@ -3,7 +3,7 @@
          "Show informations on the side")
 
 (website-url "https://github.com/emacs-sideline/sideline")
-(keywords "sideline")
+(keywords "convenience")
 
 (package-file "sideline.el")
 
