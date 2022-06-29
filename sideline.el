@@ -1,4 +1,4 @@
-;;; sideline.el --- Show informations on the side  -*- lexical-binding: t; -*-
+;;; sideline.el --- Show information on the side  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2022  Shen, Jen-Chieh
 ;; Created date 2022-06-13 22:08:26
@@ -26,7 +26,7 @@
 
 ;;; Commentary:
 ;;
-;; Show informations on the side.
+;; Show information on the side.
 ;;
 
 ;;; Code:
@@ -38,7 +38,7 @@
 (require 'subr-x)
 
 (defgroup sideline nil
-  "Show informations on the side."
+  "Show information on the side."
   :prefix "sideline-"
   :group 'tool
   :link '(url-link :tag "Repository" "https://github.com/emacs-sideline/sideline"))

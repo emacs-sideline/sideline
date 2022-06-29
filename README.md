@@ -15,6 +15,7 @@ left/right side of the buffer window.
 **Table of Contents**
 
 - [sideline](#sideline)
+    - [❓ Why?](#❓-why)
     - [🔨 Quickstart](#🔨-quickstart)
         - [👥 Configure backends](#👥-configure-backends)
     - [📌 Define your own backend](#📌-define-your-own-backend)
@@ -22,6 +23,11 @@ left/right side of the buffer window.
     - [Contribute](#contribute)
 
 <!-- markdown-toc end -->
+
+## ❓ Why?
+
+Instead of hard-coded information, we extracted it to multiple different backends.
+It allows us to customize the displayed information the way we want.
 
 ## 🔨 Quickstart
 
@@ -102,7 +108,9 @@ Here is a list of supported commands:
 
 ## 📂 Example projects
 
+* [sideline-blame](https://github.com/emacs-sideline/sideline-blame)
 * [sideline-flycheck](https://github.com/jcs-elpa/sideline-flycheck)
+* [sideline-flymake](https://github.com/emacs-sideline/sideline-flymake)
 * [sideline-lsp](https://github.com/jcs-elpa/sideline-lsp)
 
 ## Contribute
