@@ -37,10 +37,7 @@
 ;;
 ;;   M-x sideline-mode
 ;;
-;;
 ;; For backends choice, see https://github.com/emacs-sideline/sideline#-example-projects
-;;
-
 ;;
 
 ;;; Code:
