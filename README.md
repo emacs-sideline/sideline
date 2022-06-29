@@ -27,7 +27,8 @@ left/right side of the buffer window.
 ## ❓ Why?
 
 Instead of hard-coded information, we extracted it to multiple different backends.
-It allows us to customize the displayed information the way we want.
+It allows us to customize the displayed information we want, which is
+more flexible and configurable.
 
 ## 🔨 Quickstart
 
