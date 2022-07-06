@@ -453,10 +453,10 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
   "Timer for delay.")
 
 (defvar-local sideline--ex-window-start nil
-  "Holds previouse window start point; this will detect vertical scrolling.")
+  "Holds previous window start point; this will detect vertical scrolling.")
 
 (defvar-local sideline--ex-window-hscroll nil
-  "Holds previouse window hscroll; this will detect horizontal scrolling.")
+  "Holds previous window hscroll; this will detect horizontal scrolling.")
 
 (defun sideline--do-render-p ()
   "Return non-nil if we should re-render sidelines in the post-command."
