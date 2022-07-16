@@ -106,8 +106,8 @@ then you can tell your user to...
 Here is a list of supported commands:
 
 * `candidates` - list of strings to display; accept async function
-* `action` - callback function after the mouse click
-* `face` - face overrides the default sideline face
+* `action` - (optional) callback function after the mouse click
+* `face` - (optional) face overrides the default sideline face
 
 ## 📂 Example projects
 
