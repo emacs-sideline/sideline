@@ -196,7 +196,7 @@
                (shr-string-pixel-width str))
              ))
     (+ (/ len width)
-       (if (zerop (% len width)) 0 1))))
+       (if (zerop (% len width)) 0 1))))  ; add one if exceeed
 
 (defun sideline--kill-timer (timer)
   "Kill TIMER."
