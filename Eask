@@ -1,6 +1,6 @@
 (package "sideline"
          "0.1.1"
-         "Show informations on the side")
+         "Show information on the side")
 
 (website-url "https://github.com/emacs-sideline/sideline")
 (keywords "convenience")
