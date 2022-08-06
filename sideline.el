@@ -191,9 +191,12 @@
 (defun sideline--str-len (str)
   "Calculate STR in pixel width."
   (let ((width (window-font-width))
-        (len (shr-string-pixel-width str)))
+        (len (if (fboundp #'string-pixel-width)
+                 (string-pixel-width str)
+               (shr-string-pixel-width str))
+             ))
     (+ (/ len width)
-       (if (zerop (% len width)) 0 1))))  ; add one if exceeed
+       (if (zerop (% len width)) 0 1))))
 
 (defun sideline--kill-timer (timer)
   "Kill TIMER."
