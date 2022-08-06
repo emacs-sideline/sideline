@@ -193,8 +193,7 @@
   (let ((width (window-font-width))
         (len (if (fboundp #'string-pixel-width)
                  (string-pixel-width str)
-               (shr-string-pixel-width str))
-             ))
+               (shr-string-pixel-width str))))
     (+ (/ len width)
        (if (zerop (% len width)) 0 1))))  ; add one if exceeed
 
