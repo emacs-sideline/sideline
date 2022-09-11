@@ -83,8 +83,8 @@
   :group 'sideline)
 
 (defface sideline-backend
-  '((((background light)) :foreground "#BFB500")
-    (t :foreground "#FFB27D"))
+  '((((background light)) :foreground "#D6D6D6")
+    (t :foreground "#3E3E3E"))
   "Face used to highlight action text."
   :group 'sideline)
 
@@ -93,9 +93,12 @@
   :type 'boolean
   :group 'sideline)
 
-(defcustom sideline-display-backend-infront nil
-  "If non-nil, display the backend name infront."
-  :type 'boolean
+(defcustom sideline-display-backend-type 'outer
+  "Method type to display backend name."
+  :type '(choice (const :tag "Display on left" left)
+                 (const :tag "Display on right" right)
+                 (const :tag "Display on inner" inner)
+                 (const :tag "Display on outer" outer))
   :group 'sideline)
 
 (defcustom sideline-display-backend-format "[%s]"
@@ -358,28 +361,53 @@ Argument CANDIDATE is the data for users."
   "Clean up all overlays."
   (mapc #'delete-overlay sideline--overlays))
 
+(defun sideline--display-string (on-left backend-str candidate &optional type)
+  "Return the display string to render the text correctly.
+
+Argument ON-LEFT is used to calculate the output string.
+
+Arguments BACKEND-STR and CANDIDATE are used to string concatenation, it
+produces the result string.
+
+Optional argument TYPE is used for recursive `outer' and `inner'."
+  (cl-case (or type sideline-display-backend-type)
+    (`left (concat backend-str " " candidate))
+    (`right (concat candidate " " backend-str))
+    (`inner (sideline--display-string on-left backend-str candidate (if on-left 'right 'left)))
+    (`outer (sideline--display-string on-left backend-str candidate (if on-left 'left 'right)))))
+
+(defun sideline--display-starting (on-left backend-str &optional type)
+  "Return the starting text position to render the text correctly.
+
+Argument ON-LEFT is used to calculate the starting text position..
+
+Argument BACKEND-STR is used to calculate the starting text position.
+
+Optional argument TYPE is used for recursive `outer' and `inner'."
+  (cl-case (or type sideline-display-backend-type)
+    (`left (1+ (length backend-str)))
+    (`right 0)
+    (`inner (sideline--display-starting on-left backend-str (if on-left 'right 'left)))
+    (`outer (sideline--display-starting on-left backend-str (if on-left 'left 'right)))))
+
 (defun sideline--create-ov (candidate action face name on-left order)
   "Create information (CANDIDATE) overlay.
 
 See function `sideline--render-candidates' document string for arguments ACTION,
 FACE, NAME, ON-LEFT, and ORDER for details."
   (when-let*
-      ((name-str (format sideline-display-backend-format name))
+      ((backend-str (format sideline-display-backend-format name))
        (text (if sideline-display-backend-name  ; this is the displayed text
                  (progn
-                   (add-face-text-property 0 (length name-str) 'sideline-backend nil name-str)
-                   (if sideline-display-backend-infront
-                       (concat name-str " " candidate)
-                     (concat candidate " " name-str)))
+                   (add-face-text-property 0 (length backend-str) 'sideline-backend nil backend-str)
+                   (sideline--display-string on-left backend-str candidate))
                candidate))
        (len-text (length text))
        (len-cand (length candidate))
        (title
         (progn
           (unless (get-text-property 0 'face candidate)  ; If no face, we apply one
-            (let ((start (if sideline-display-backend-infront
-                             (1+ (length name-str))
-                           0)))
+            (let ((start (sideline--display-starting on-left backend-str)))
               (add-face-text-property start (+ start len-cand) face nil text)))
           (when action  ; apply action listener
             (let ((keymap (sideline--create-keymap action candidate)))
