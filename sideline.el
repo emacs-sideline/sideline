@@ -174,13 +174,13 @@
 
 ;;;###autoload
 (define-minor-mode sideline-mode
-  "Minor mode 'sideline-mode'."
+  "Minor mode `sideline-mode'."
   :lighter " Sideline"
   :group sideline
   (if sideline-mode (sideline--enable) (sideline--disable)))
 
 (defun sideline--turn-on-sideline-mode ()
-  "Turn on the 'sideline-mode'."
+  "Turn on the `sideline-mode'."
   (sideline-mode 1))
 
 ;;;###autoload
@@ -191,6 +191,12 @@
 ;;
 ;; (@* "Util" )
 ;;
+
+;; Copied from s.el
+(defun sideline--s-replace (old new s)
+  "Replace OLD with NEW in S."
+  (declare (pure t) (side-effect-free t))
+  (replace-regexp-in-string (regexp-quote old) new s t t))
 
 (defmacro sideline--with-buffer (buffer-or-name &rest body)
   "Execute the forms in BODY with BUFFER-OR-NAME temporarily current."
@@ -345,7 +351,7 @@ Argument CANDIDATE is the data for users."
   "Create information (CANDIDATE) overlay.
 
 See function `sideline--render-candidates' document string for arguments ACTION,
-FACE, ON-LEFT, and ORDER for details."
+FACE, NAME, ON-LEFT, and ORDER for details."
   (when-let*
       ((text (if sideline-display-backend-name  ; this is the displayed text
                  (format sideline-display-backend-format candidate name)
@@ -410,7 +416,7 @@ Argument ORDER determined the search order for going up or down."
         (action (sideline--call-backend backend 'action))
         (face (or (sideline--call-backend backend 'face) 'sideline-default))
         (name (or (sideline--call-backend backend 'name)
-                  (string-replace "sideline" "" (format "%s" backend)))))
+                  (sideline--s-replace "sideline-" "" (format "%s" backend)))))
     (dolist (candidate candidates)
       (sideline--create-ov candidate action face name on-left order))))
 
