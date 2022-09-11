@@ -82,6 +82,16 @@
   "Face used to highlight action text."
   :group 'sideline)
 
+(defcustom sideline-display-backend-name nil
+  "Weather to display backend name in the candidate."
+  :type 'boolean
+  :group 'sideline)
+
+(defcustom sideline-display-backend-format "%s <%s>"
+  "Format string for candidate and backend name."
+  :type 'string
+  :group 'sideline)
+
 (defcustom sideline-backends-left-skip-current-line t
   "Don't display left sideline in current line."
   :type 'boolean
@@ -331,22 +341,25 @@ Argument CANDIDATE is the data for users."
   "Clean up all overlays."
   (mapc #'delete-overlay sideline--overlays))
 
-(defun sideline--create-ov (candidate action face on-left order)
+(defun sideline--create-ov (candidate action face name on-left order)
   "Create information (CANDIDATE) overlay.
 
 See function `sideline--render-candidates' document string for arguments ACTION,
 FACE, ON-LEFT, and ORDER for details."
   (when-let*
-      ((len-cand (length candidate))
+      ((text (if sideline-display-backend-name  ; this is the displayed text
+                 (format sideline-display-backend-format candidate name)
+               candidate))
+       (len-text (length text))
        (title
         (progn
           (unless (get-text-property 0 'face candidate)  ; If no face, we apply one
-            (add-face-text-property 0 len-cand face nil candidate))
-          (when action
+            (add-face-text-property 0 len-text face nil text))
+          (when action  ; apply action listener
             (let ((keymap (sideline--create-keymap action candidate)))
-              (add-text-properties 0 len-cand `(keymap ,keymap mouse-face highlight) candidate)))
-          (if on-left (format sideline-format-left candidate)
-            (format sideline-format-right candidate))))
+              (add-text-properties 0 len-text `(keymap ,keymap mouse-face highlight) candidate)))
+          (if on-left (format sideline-format-left text)
+            (format sideline-format-right text))))
        (len-title (sideline--str-len title))
        (pos-ov (sideline--find-line len-title on-left order))
        (pos-start (car pos-ov)) (pos-end (cdr pos-ov))
@@ -384,21 +397,22 @@ FACE, ON-LEFT, and ORDER for details."
 ;; (@* "Async" )
 ;;
 
-(defun sideline--render-candidates (candidates action face on-left order)
+(defun sideline--render-candidates (candidates backend on-left order)
   "Render a list of backends (CANDIDATES).
 
-Argument ACTION is the code action callback.
-
-Argument FACE is optional face to render text; default face is
-`sideline-default'.
+Argument BACKEND is the backend symbol.
 
 Argument ON-LEFT is a flag indicates rendering alignment; if it's non-nil then
 we align to the left, otherwise to the right.
 
 Argument ORDER determined the search order for going up or down."
-  (let ((inhibit-field-text-motion t))
+  (let ((inhibit-field-text-motion t)
+        (action (sideline--call-backend backend 'action))
+        (face (or (sideline--call-backend backend 'face) 'sideline-default))
+        (name (or (sideline--call-backend backend 'name)
+                  (string-replace "sideline" "" (format "%s" backend)))))
     (dolist (candidate candidates)
-      (sideline--create-ov candidate action face on-left order))))
+      (sideline--create-ov candidate action face name on-left order))))
 
 ;;
 ;; (@* "Core" )
@@ -419,16 +433,14 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
                     ;; fallback to default
                     (if on-left sideline-order-left sideline-order-right)))
            (candidates (sideline--call-backend backend 'candidates))
-           (action (sideline--call-backend backend 'action))
-           (face (or (sideline--call-backend backend 'face) 'sideline-default))
            (buffer (current-buffer)))  ; for async check
       (if (eq (car candidates) :async)
           (funcall (cdr candidates)
                    (lambda (cands &rest _)
                      (sideline--with-buffer buffer
                        (when sideline-mode
-                         (sideline--render-candidates cands action face on-left order)))))
-        (sideline--render-candidates candidates action face on-left order)))))
+                         (sideline--render-candidates cands backend on-left order)))))
+        (sideline--render-candidates candidates backend on-left order)))))
 
 (defun sideline-stop-p ()
   "Return non-nil if the sideline should not be display."
