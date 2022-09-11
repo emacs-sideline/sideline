@@ -87,7 +87,12 @@
   :type 'boolean
   :group 'sideline)
 
-(defcustom sideline-display-backend-format "%s <%s>"
+(defcustom sideline-display-backend-infront nil
+  "If non-nil, display the backend name infront."
+  :type 'boolean
+  :group 'sideline)
+
+(defcustom sideline-display-backend-format "%s [%s]"
   "Format string for candidate and backend name."
   :type 'string
   :group 'sideline)
@@ -354,7 +359,9 @@ See function `sideline--render-candidates' document string for arguments ACTION,
 FACE, NAME, ON-LEFT, and ORDER for details."
   (when-let*
       ((text (if sideline-display-backend-name  ; this is the displayed text
-                 (format sideline-display-backend-format candidate name)
+                 (format sideline-display-backend-format
+                         (if sideline-display-backend-infront name candidate)
+                         (if sideline-display-backend-infront candidate name))
                candidate))
        (len-text (length text))
        (title
@@ -363,7 +370,7 @@ FACE, NAME, ON-LEFT, and ORDER for details."
             (add-face-text-property 0 len-text face nil text))
           (when action  ; apply action listener
             (let ((keymap (sideline--create-keymap action candidate)))
-              (add-text-properties 0 len-text `(keymap ,keymap mouse-face highlight) candidate)))
+              (add-text-properties 0 len-text `(keymap ,keymap mouse-face highlight) text)))
           (if on-left (format sideline-format-left text)
             (format sideline-format-right text))))
        (len-title (sideline--str-len title))
