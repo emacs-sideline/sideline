@@ -83,8 +83,8 @@
   :group 'sideline)
 
 (defface sideline-backend
-  '((((background light)) :foreground "#D6D6D6")
-    (t :foreground "#3E3E3E"))
+  '((((background light)) :foreground "#7F7F7F")
+    (t :foreground "#9B9B9B"))
   "Face used to highlight action text."
   :group 'sideline)
 
