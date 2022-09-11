@@ -82,6 +82,12 @@
   "Face used to highlight action text."
   :group 'sideline)
 
+(defface sideline-backend
+  '((((background light)) :foreground "#BFB500")
+    (t :foreground "#FFB27D"))
+  "Face used to highlight action text."
+  :group 'sideline)
+
 (defcustom sideline-display-backend-name nil
   "Weather to display backend name in the candidate."
   :type 'boolean
@@ -92,7 +98,7 @@
   :type 'boolean
   :group 'sideline)
 
-(defcustom sideline-display-backend-format "%s [%s]"
+(defcustom sideline-display-backend-format "[%s]"
   "Format string for candidate and backend name."
   :type 'string
   :group 'sideline)
@@ -358,16 +364,23 @@ Argument CANDIDATE is the data for users."
 See function `sideline--render-candidates' document string for arguments ACTION,
 FACE, NAME, ON-LEFT, and ORDER for details."
   (when-let*
-      ((text (if sideline-display-backend-name  ; this is the displayed text
-                 (format sideline-display-backend-format
-                         (if sideline-display-backend-infront name candidate)
-                         (if sideline-display-backend-infront candidate name))
+      ((name-str (format sideline-display-backend-format name))
+       (text (if sideline-display-backend-name  ; this is the displayed text
+                 (progn
+                   (add-face-text-property 0 (length name-str) 'sideline-backend nil name-str)
+                   (if sideline-display-backend-infront
+                       (concat name-str " " candidate)
+                     (concat candidate " " name-str)))
                candidate))
        (len-text (length text))
+       (len-cand (length candidate))
        (title
         (progn
           (unless (get-text-property 0 'face candidate)  ; If no face, we apply one
-            (add-face-text-property 0 len-text face nil text))
+            (let ((start (if sideline-display-backend-infront
+                             (1+ (length name-str))
+                           0)))
+              (add-face-text-property start (+ start len-cand) face nil text)))
           (when action  ; apply action listener
             (let ((keymap (sideline--create-keymap action candidate)))
               (add-text-properties 0 len-text `(keymap ,keymap mouse-face highlight) text)))
