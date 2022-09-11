@@ -82,6 +82,30 @@
   "Face used to highlight action text."
   :group 'sideline)
 
+(defface sideline-backend
+  '((((background light)) :foreground "#D6D6D6")
+    (t :foreground "#3E3E3E"))
+  "Face used to highlight action text."
+  :group 'sideline)
+
+(defcustom sideline-display-backend-name nil
+  "Weather to display backend name in the candidate."
+  :type 'boolean
+  :group 'sideline)
+
+(defcustom sideline-display-backend-type 'outer
+  "Method type to display backend name."
+  :type '(choice (const :tag "Display on left" left)
+                 (const :tag "Display on right" right)
+                 (const :tag "Display on inner" inner)
+                 (const :tag "Display on outer" outer))
+  :group 'sideline)
+
+(defcustom sideline-display-backend-format "[%s]"
+  "Format string for candidate and backend name."
+  :type 'string
+  :group 'sideline)
+
 (defcustom sideline-backends-left-skip-current-line t
   "Don't display left sideline in current line."
   :type 'boolean
@@ -164,13 +188,13 @@
 
 ;;;###autoload
 (define-minor-mode sideline-mode
-  "Minor mode 'sideline-mode'."
+  "Minor mode `sideline-mode'."
   :lighter " Sideline"
   :group sideline
   (if sideline-mode (sideline--enable) (sideline--disable)))
 
 (defun sideline--turn-on-sideline-mode ()
-  "Turn on the 'sideline-mode'."
+  "Turn on the `sideline-mode'."
   (sideline-mode 1))
 
 ;;;###autoload
@@ -181,6 +205,12 @@
 ;;
 ;; (@* "Util" )
 ;;
+
+;; Copied from s.el
+(defun sideline--s-replace (old new s)
+  "Replace OLD with NEW in S."
+  (declare (pure t) (side-effect-free t))
+  (replace-regexp-in-string (regexp-quote old) new s t t))
 
 (defmacro sideline--with-buffer (buffer-or-name &rest body)
   "Execute the forms in BODY with BUFFER-OR-NAME temporarily current."
@@ -331,22 +361,59 @@ Argument CANDIDATE is the data for users."
   "Clean up all overlays."
   (mapc #'delete-overlay sideline--overlays))
 
-(defun sideline--create-ov (candidate action face on-left order)
+(defun sideline--display-string (on-left backend-str candidate &optional type)
+  "Return the display string to render the text correctly.
+
+Argument ON-LEFT is used to calculate the output string.
+
+Arguments BACKEND-STR and CANDIDATE are used to string concatenation, it
+produces the result string.
+
+Optional argument TYPE is used for recursive `outer' and `inner'."
+  (cl-case (or type sideline-display-backend-type)
+    (`left (concat backend-str " " candidate))
+    (`right (concat candidate " " backend-str))
+    (`inner (sideline--display-string on-left backend-str candidate (if on-left 'right 'left)))
+    (`outer (sideline--display-string on-left backend-str candidate (if on-left 'left 'right)))))
+
+(defun sideline--display-starting (on-left backend-str &optional type)
+  "Return the starting text position to render the text correctly.
+
+Argument ON-LEFT is used to calculate the starting text position..
+
+Argument BACKEND-STR is used to calculate the starting text position.
+
+Optional argument TYPE is used for recursive `outer' and `inner'."
+  (cl-case (or type sideline-display-backend-type)
+    (`left (1+ (length backend-str)))
+    (`right 0)
+    (`inner (sideline--display-starting on-left backend-str (if on-left 'right 'left)))
+    (`outer (sideline--display-starting on-left backend-str (if on-left 'left 'right)))))
+
+(defun sideline--create-ov (candidate action face name on-left order)
   "Create information (CANDIDATE) overlay.
 
 See function `sideline--render-candidates' document string for arguments ACTION,
-FACE, ON-LEFT, and ORDER for details."
+FACE, NAME, ON-LEFT, and ORDER for details."
   (when-let*
-      ((len-cand (length candidate))
+      ((backend-str (format sideline-display-backend-format name))
+       (text (if sideline-display-backend-name  ; this is the displayed text
+                 (progn
+                   (add-face-text-property 0 (length backend-str) 'sideline-backend nil backend-str)
+                   (sideline--display-string on-left backend-str candidate))
+               candidate))
+       (len-text (length text))
+       (len-cand (length candidate))
        (title
         (progn
           (unless (get-text-property 0 'face candidate)  ; If no face, we apply one
-            (add-face-text-property 0 len-cand face nil candidate))
-          (when action
+            (let ((start (sideline--display-starting on-left backend-str)))
+              (add-face-text-property start (+ start len-cand) face nil text)))
+          (when action  ; apply action listener
             (let ((keymap (sideline--create-keymap action candidate)))
-              (add-text-properties 0 len-cand `(keymap ,keymap mouse-face highlight) candidate)))
-          (if on-left (format sideline-format-left candidate)
-            (format sideline-format-right candidate))))
+              (add-text-properties 0 len-text `(keymap ,keymap mouse-face highlight) text)))
+          (if on-left (format sideline-format-left text)
+            (format sideline-format-right text))))
        (len-title (sideline--str-len title))
        (pos-ov (sideline--find-line len-title on-left order))
        (pos-start (car pos-ov)) (pos-end (cdr pos-ov))
@@ -384,21 +451,22 @@ FACE, ON-LEFT, and ORDER for details."
 ;; (@* "Async" )
 ;;
 
-(defun sideline--render-candidates (candidates action face on-left order)
+(defun sideline--render-candidates (candidates backend on-left order)
   "Render a list of backends (CANDIDATES).
 
-Argument ACTION is the code action callback.
-
-Argument FACE is optional face to render text; default face is
-`sideline-default'.
+Argument BACKEND is the backend symbol.
 
 Argument ON-LEFT is a flag indicates rendering alignment; if it's non-nil then
 we align to the left, otherwise to the right.
 
 Argument ORDER determined the search order for going up or down."
-  (let ((inhibit-field-text-motion t))
+  (let ((inhibit-field-text-motion t)
+        (action (sideline--call-backend backend 'action))
+        (face (or (sideline--call-backend backend 'face) 'sideline-default))
+        (name (or (sideline--call-backend backend 'name)
+                  (sideline--s-replace "sideline-" "" (format "%s" backend)))))
     (dolist (candidate candidates)
-      (sideline--create-ov candidate action face on-left order))))
+      (sideline--create-ov candidate action face name on-left order))))
 
 ;;
 ;; (@* "Core" )
@@ -419,16 +487,14 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
                     ;; fallback to default
                     (if on-left sideline-order-left sideline-order-right)))
            (candidates (sideline--call-backend backend 'candidates))
-           (action (sideline--call-backend backend 'action))
-           (face (or (sideline--call-backend backend 'face) 'sideline-default))
            (buffer (current-buffer)))  ; for async check
       (if (eq (car candidates) :async)
           (funcall (cdr candidates)
                    (lambda (cands &rest _)
                      (sideline--with-buffer buffer
                        (when sideline-mode
-                         (sideline--render-candidates cands action face on-left order)))))
-        (sideline--render-candidates candidates action face on-left order)))))
+                         (sideline--render-candidates cands backend on-left order)))))
+        (sideline--render-candidates candidates backend on-left order)))))
 
 (defun sideline-stop-p ()
   "Return non-nil if the sideline should not be display."
