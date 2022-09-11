@@ -42,7 +42,8 @@ more flexible and configurable.
         sideline-order-right 'up               ; or 'down
         sideline-format-left "%s   "           ; format for left aligment
         sideline-format-right "   %s"          ; format for right aligment
-        sideline-priority 100))                ; overlays' priority
+        sideline-priority 100                  ; overlays' priority
+        sideline-display-backend-name t))      ; display the backend name
 ```
 
 ### 👥 Configure backends
@@ -108,6 +109,7 @@ Here is a list of supported commands:
 * `candidates` - list of strings to display; accept async function
 * `action` - (optional) callback function after the mouse click
 * `face` - (optional) face overrides the default sideline face
+* `name` - (optional) backend name to display
 
 ## 📂 Example projects
 
