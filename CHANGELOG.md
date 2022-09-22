@@ -14,6 +14,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 * Accept cons cell for `backends` variables (1f628103d24c8871396da1405915b5104c26a203)
 * Calculate string length in pixel instead (bf375ac2b659e0312bc5a3a67aded4d3569c0b51)
 * Add capability to display backend name (#3)
+* Don't load `shr` if not needed (f7e00ca0d445d0395a4912fb6d30e4d46ba7e87c)
 
 ## 0.1.1
 > Released Jun 15, 2022
