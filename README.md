@@ -101,7 +101,7 @@ or define it asynchronously:
 then you can tell your user to...
 
 ```elisp
-(setq sidelin-backends-left '(my-backend))  ; use `sidelin-backends-right' for right alignment
+(setq sideline-backends-left '(my-backend))  ; use `sideline-backends-right' for right alignment
 ```
 
 Here is a list of supported commands:
