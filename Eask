@@ -7,6 +7,8 @@
 
 (package-file "sideline.el")
 
+(script "test" "echo \"Error: no test specified\" && exit 1")
+
 (source "gnu")
 
 (depends-on "emacs" "27.1")
