@@ -234,7 +234,7 @@
 
 (defun sideline--str-len (str)
   "Calculate STR in pixel width."
-  (let ((width (window-font-width))
+  (let ((width (frame-char-width))
         (len (sideline--string-pixel-width str)))
     (+ (/ len width)
        (if (zerop (% len width)) 0 1))))  ; add one if exceeed
