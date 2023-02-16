@@ -35,7 +35,7 @@ more flexible and configurable.
 ## 🔨 Quickstart
 
 ```elisp
-(leaf sideline
+(use-package sideline
   :init
   (setq sideline-backends-skip-current-line t  ; don't display on current line
         sideline-order-left 'down              ; or 'up
@@ -51,7 +51,7 @@ more flexible and configurable.
 The most basic way to set up the backends for sideline.
 
 ```elisp
-(leaf sideline
+(use-package sideline
   :init
   (setq sideline-backends-left '(sideline-flycheck)
         sideline-backends-right '(sideline-lsp)))
@@ -64,7 +64,7 @@ The most basic way to set up the backends for sideline.
 Alternatively, you could set it to cons cell with the search order.
 
 ```elisp
-(leaf sideline
+(use-package sideline
   :init
   (setq sideline-backends-right '((sideline-lsp      . up)
                                   (sideline-flycheck . down))))
