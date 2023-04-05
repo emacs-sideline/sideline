@@ -118,6 +118,7 @@ Here is a list of supported commands:
 * [sideline-flymake](https://github.com/emacs-sideline/sideline-flymake)
 * [sideline-lsp](https://github.com/jcs-elpa/sideline-lsp)
 * [sideline-eldoc](https://github.com/ginqi7/sideline-eldoc)
+* [sideline-color](https://github.com/emacs-sideline/sideline-color)
 
 ## Contribute
 
