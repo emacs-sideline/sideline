@@ -46,6 +46,24 @@ more flexible and configurable.
         sideline-display-backend-name t))      ; display the backend name
 ```
 
+Then you enable `sideline-mode` depends on the backend you use. For example:
+
+```elisp
+(use-package sideline
+  :hook ((flycheck-mode . sideline-mode)   ; for `sideline-flycheck`
+         (flymake-mode  . sideline-mode))  ; for `sideline-flymake`
+  ...
+```
+
+Some backends require extra setup. `sideline-flycheck` is one of that backend:
+
+```elisp
+(use-package sideline-flycheck
+  :hook (flycheck-mode . sideline-flycheck-setup))
+```
+
+Or simply `M-x sideline-mode`!
+
 ### 👥 Configure backends
 
 The most basic way to set up the backends for sideline.
