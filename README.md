@@ -55,7 +55,7 @@ Then you enable `sideline-mode` depends on the backend you use. For example:
   ...
 ```
 
-Some backends require extra setup. `sideline-flycheck` is one of that backend:
+Some backends require extra setup. `sideline-flycheck` is one of that backends:
 
 ```elisp
 (use-package sideline-flycheck
