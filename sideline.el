@@ -268,7 +268,7 @@
 
 (defun sideline--opposing-str-len ()
   "Return opposing overlay's content length."
-  (if-let* ((ov (car (sideline--overlays-in-line)))
+  (if-let* ((ov (car (sideline--overlays-in-line)))  ; always return length of 1
             (str (overlay-get ov 'before-string)))
       (sideline--str-len str)
     0))  ; not found, then return 0
@@ -281,11 +281,17 @@
 (defun sideline--calc-space (str-len on-left opposing-str-len)
   "Calculate space in current line.
 
-Argument STR-LEN is the string size.
+Argument STR-LEN is the string size.  Another argument OPPOSING-STR-LEN is the
+string size already occupied.
 
 If argument ON-LEFT is non-nil, we calculate to the left side.  Otherwise,
 calculate to the right side."
+  ;; XXX: We add up the `str-len' with `opposing-str-len' because they are using
+  ;; the same line!
+  ;;
+  ;; This is smart since we add up the string size before the calculation!
   (setq str-len (+ str-len opposing-str-len))
+  ;; Start the calculation!
   (if on-left
       (let ((column-start (window-hscroll))
             (pos-first (save-excursion (back-to-indentation) (current-column)))
@@ -442,6 +448,7 @@ FACE, NAME, ON-LEFT, and ORDER for details."
             (t (overlay-put ov 'before-string str)))
       (overlay-put ov 'window (get-buffer-window))
       (overlay-put ov 'priority (if on-left sideline-priority
+                                  ;; Add 1 to render on the same line!
                                   (1+ sideline-priority)))
       (overlay-put ov 'creator 'sideline)
       (push ov sideline--overlays))))
