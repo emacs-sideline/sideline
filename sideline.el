@@ -251,18 +251,47 @@
   "Correct window width for sideline."
   (window-max-chars-per-line))
 
+(defun sideline--overlays-in (prop name &optional beg end)
+  "Return overlays with PROP of NAME, from region BEG to END."
+  (let* ((beg (or beg (point-min)))
+         (end (or end (point-max)))
+         (lst)
+         (ovs (overlays-in beg end)))
+    (dolist (ov ovs)
+      (when (eq name (overlay-get ov prop))
+        (push ov lst)))
+    lst))
+
+(defun sideline--overlays-in-line ()
+  "Return sideline overlays in line."
+  (sideline--overlays-in 'creator 'sideline (line-beginning-position) (line-end-position)))
+
+(defun sideline--opposing-str-len ()
+  "Return opposing overlay's content length."
+  (if-let* ((ov (car (sideline--overlays-in-line)))  ; always return length of 1
+            (str (overlay-get ov 'before-string)))
+      (sideline--str-len str)
+    0))  ; not found, then return 0
+
 (defun sideline--align (&rest lengths)
   "Align sideline string by LENGTHS from the right of the window."
   (list (* (window-font-width)
            (+ (apply #'+ lengths) (if (display-graphic-p) 1 2)))))
 
-(defun sideline--calc-space (str-len on-left)
+(defun sideline--calc-space (str-len on-left opposing-str-len)
   "Calculate space in current line.
 
-Argument STR-LEN is the string size.
+Argument STR-LEN is the string size.  Another argument OPPOSING-STR-LEN is the
+string size already occupied.
 
 If argument ON-LEFT is non-nil, we calculate to the left side.  Otherwise,
 calculate to the right side."
+  ;; XXX: We add up the `str-len' with `opposing-str-len' because they are using
+  ;; the same line!
+  ;;
+  ;; This is smart since we add up the string size before the calculation!
+  (setq str-len (+ str-len opposing-str-len))
+  ;; Start the calculation!
   (if on-left
       (let ((column-start (window-hscroll))
             (pos-first (save-excursion (back-to-indentation) (current-column)))
@@ -304,7 +333,7 @@ available lines in both directions (up & down)."
           (setq break-it t))
         (when (and (not (memq (line-beginning-position) occupied-lines))
                    (not break-it))
-          (when-let ((col (sideline--calc-space str-len on-left)))
+          (when-let ((col (sideline--calc-space str-len on-left (sideline--opposing-str-len))))
             (setq pos-ov (cons (sideline--column-to-point (car col))
                                (sideline--column-to-point (cdr col))))
             (setq break-it t)
@@ -413,12 +442,15 @@ FACE, NAME, ON-LEFT, and ORDER for details."
                              nil t t)))
       (cond (on-left
              (if empty-ln
-                 (overlay-put ov 'after-string str)
+                 (overlay-put ov 'before-string str)
                (overlay-put ov 'display str)
                (overlay-put ov 'invisible t)))
-            (t (overlay-put ov 'after-string str)))
+            (t (overlay-put ov 'before-string str)))
       (overlay-put ov 'window (get-buffer-window))
-      (overlay-put ov 'priority sideline-priority)
+      (overlay-put ov 'priority (if on-left sideline-priority
+                                  ;; Add 1 to render on the same line!
+                                  (1+ sideline-priority)))
+      (overlay-put ov 'creator 'sideline)
       (push ov sideline--overlays))))
 
 ;;
