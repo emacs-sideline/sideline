@@ -411,7 +411,9 @@ FACE, NAME, ON-LEFT, and ORDER for details."
        (title
         (progn
           (unless (get-text-property 0 'face candidate)  ; If no face, we apply one
-            (let ((start (sideline--display-starting on-left backend-str)))
+            (let ((start (if sideline-display-backend-name
+                             (sideline--display-starting on-left backend-str)
+                           0)))
               (add-face-text-property start (+ start len-cand) face nil text)))
           (when action  ; apply action listener
             (let ((keymap (sideline--create-keymap action candidate)))
