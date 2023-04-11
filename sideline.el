@@ -293,16 +293,18 @@ calculate to the right side."
   (setq str-len (+ str-len opposing-str-len))
   ;; Start the calculation!
   (if on-left
-      (let ((column-start (window-hscroll))
-            (pos-first (save-excursion (back-to-indentation) (current-column)))
-            (pos-end (save-excursion (end-of-line) (current-column))))
+      (let* ((line (sideline--s-replace "\n" "" (thing-at-point 'line)))
+             (column-start (window-hscroll))
+             (pos-first (save-excursion (back-to-indentation) (current-column)))
+             (pos-end (- (sideline--str-len line) column-start)))
         (cond ((<= str-len (- pos-first column-start))
                (cons column-start pos-first))
               ((= pos-first pos-end)
                (cons column-start (sideline--window-width)))))
-    (let* ((column-start (window-hscroll))
+    (let* ((line (sideline--s-replace "\n" "" (thing-at-point 'line)))
+           (column-start (window-hscroll))
            (column-end (+ column-start (sideline--window-width)))
-           (pos-end (save-excursion (end-of-line) (current-column))))
+           (pos-end (- (sideline--str-len line) column-start)))
       (when (<= str-len (- column-end pos-end))
         (cons column-end pos-end)))))
 
