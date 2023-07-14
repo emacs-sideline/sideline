@@ -37,13 +37,14 @@ more flexible and configurable.
 ```elisp
 (use-package sideline
   :init
-  (setq sideline-backends-skip-current-line t  ; don't display on current line
-        sideline-order-left 'down              ; or 'up
-        sideline-order-right 'up               ; or 'down
-        sideline-format-left "%s   "           ; format for left aligment
-        sideline-format-right "   %s"          ; format for right aligment
-        sideline-priority 100                  ; overlays' priority
-        sideline-display-backend-name t))      ; display the backend name
+  (setq sideline-backends-left-skip-current-line t   ; don't display on current line (left)
+        sideline-backends-right-skip-current-line t  ; don't display on current line (right)
+        sideline-order-left 'down                    ; or 'up
+        sideline-order-right 'up                     ; or 'down
+        sideline-format-left "%s   "                 ; format for left aligment
+        sideline-format-right "   %s"                ; format for right aligment
+        sideline-priority 100                        ; overlays' priority
+        sideline-display-backend-name t))            ; display the backend name
 ```
 
 Then you enable `sideline-mode` depends on the backend you use. For example:
