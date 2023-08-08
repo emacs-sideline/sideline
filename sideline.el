@@ -276,7 +276,7 @@
 (defun sideline--align (&rest lengths)
   "Align sideline string by LENGTHS from the right of the window."
   (list (* (window-font-width)
-           (+ (apply #'+ lengths) (if (display-graphic-p) 1 2)))))
+           (+ (apply #'+ lengths) (if (display-graphic-p) 1 3)))))
 
 (defun sideline--calc-space (str-len on-left opposing-str-len)
   "Calculate space in current line.
