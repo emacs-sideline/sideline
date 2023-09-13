@@ -461,6 +461,13 @@ FACE, NAME, ON-LEFT, and ORDER for details."
 ;; (@* "Async" )
 ;;
 
+(defun sideline--guess-backend-name (backend)
+  "Guess BACKEND's name."
+  (let ((name (format "%s" backend)))
+    (setq name (sideline--s-replace "sideline-" "" name)
+          name (sideline--s-replace "-sideline" "" name))
+    name))
+
 (defun sideline--render-candidates (candidates backend on-left order)
   "Render a list of backends (CANDIDATES).
 
@@ -474,7 +481,7 @@ Argument ORDER determined the search order for going up or down."
         (action (sideline--call-backend backend 'action))
         (face (or (sideline--call-backend backend 'face) 'sideline-default))
         (name (or (sideline--call-backend backend 'name)
-                  (sideline--s-replace "sideline-" "" (format "%s" backend)))))
+                  (sideline--guess-backend-name backend))))
     (dolist (candidate candidates)
       (sideline--create-ov candidate action face name on-left order))))
 
