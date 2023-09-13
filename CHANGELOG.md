@@ -17,6 +17,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 * Don't load `shr` if not needed (f7e00ca0d445d0395a4912fb6d30e4d46ba7e87c)
 * Fix alignment issue when text-scale amount is not zero (8a981bc41f0169d2b6553988bd091d4eaf5bd134)
 * Upgrade rendering with opposing length (#11)
+* Better construct backend name (b63cea69948d386f007004ba6a272fc0e944ffb9)
 
 ## 0.1.1
 > Released Jun 15, 2022
