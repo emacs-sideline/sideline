@@ -17,12 +17,12 @@ left/right side of the buffer window.
 **Table of Contents**
 
 - [sideline](#sideline)
-    - [❓ Why?](#❓-why)
-    - [🔨 Quickstart](#🔨-quickstart)
-        - [👥 Configure backends](#👥-configure-backends)
-    - [📌 Define your own backend](#📌-define-your-own-backend)
-    - [📂 Example projects](#📂-example-projects)
-    - [Contribute](#contribute)
+  - [❓ Why?](#❓-why)
+  - [🔨 Quickstart](#🔨-quickstart)
+    - [👥 Configure backends](#👥-configure-backends)
+  - [📌 Define your own backend](#📌-define-your-own-backend)
+  - [📂 Example projects](#📂-example-projects)
+  - [Contribute](#contribute)
 
 <!-- markdown-toc end -->
 
