@@ -224,16 +224,6 @@
   `(when (buffer-live-p ,buffer-or-name)
      (with-current-buffer ,buffer-or-name ,@body)))
 
-(defun sideline--line-pixel-width ()
-  "Return the line pixel width."
-  (let* ((width (frame-char-width))
-         (text-width (car (window-text-pixel-size nil
-                                                  (line-beginning-position)
-                                                  (line-end-position))))
-         (text-width (- text-width (line-number-display-width t))))
-    (+ (/ text-width width)
-       (if (zerop (% text-width width)) 0 1))))
-
 ;; TODO: Use function `string-pixel-width' after 29.1
 (defun sideline--string-pixel-width (str)
   "Return the width of STR in pixels."
@@ -304,7 +294,7 @@ calculate to the right side."
   (setq str-len (+ str-len opposing-str-len))
   ;; Start the calculation!
   (if on-left
-      (let* ((line (sideline--s-replace "\n" "" (thing-at-point 'line)))
+      (let* ((line (sideline--s-replace "\n" "" (thing-at-point 'line t)))
              (column-start (window-hscroll))
              (pos-first (save-excursion (back-to-indentation) (current-column)))
              (pos-end (- (sideline--str-len line) column-start)))
