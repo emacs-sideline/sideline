@@ -245,7 +245,7 @@
 
 (defun sideline--column-to-point (column)
   "Convert COLUMN to point."
-  (save-excursion (move-to-column column) (point)))
+  (save-excursion (move-to-column (max column 0)) (point)))
 
 (defun sideline--window-width ()
   "Correct window width for sideline."
