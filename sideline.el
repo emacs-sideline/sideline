@@ -224,24 +224,24 @@
   `(when (buffer-live-p ,buffer-or-name)
      (with-current-buffer ,buffer-or-name ,@body)))
 
-;; TODO: Use function `string-pixel-width' after 29.1
-(defun sideline--string-pixel-width (str)
-  "Return the width of STR in pixels."
-  (if (fboundp #'string-pixel-width)
-      (string-pixel-width str)
-    (require 'shr)
-    (shr-string-pixel-width str)))
-
 (defun sideline--str-no-props (str)
   "Remove STR's text properties."
   (with-temp-buffer
     (insert str)
     (buffer-substring-no-properties (point-min) (point-max))))
 
+;; TODO: Use function `string-pixel-width' after 29.1
+(defun sideline--string-pixel-width (str)
+  "Return the width of STR in pixels."
+  (let ((str (sideline--str-no-props str)))
+    (if (fboundp #'string-pixel-width)
+        (string-pixel-width str)
+      (require 'shr)
+      (shr-string-pixel-width str))))
+
 (defun sideline--str-len (str)
   "Calculate STR in pixel width."
   (let ((width (frame-char-width))
-        (str (sideline--str-no-props str))
         (len (sideline--string-pixel-width str)))
     (+ (/ len width)
        (if (zerop (% len width)) 0 1))))  ; add one if exceeed
@@ -280,10 +280,12 @@
       (sideline--str-len str)
     0))  ; not found, then return 0
 
-(defun sideline--align (&rest lengths)
-  "Align sideline string by LENGTHS from the right of the window."
-  (list (* (window-font-width)
-           (+ (apply #'+ lengths) (if (display-graphic-p) 1 3)))))
+(defun sideline--align (str offset)
+  "Align sideline STR from the left/right of the window.
+
+Argument OFFSET is additional calculation from the left/right alignment."
+  (list (+ (* (window-font-width) (+ offset (if (display-graphic-p) 0 2)))
+           (sideline--string-pixel-width str))))
 
 (defun sideline--calc-space (str-len on-left opposing-str-len)
   "Calculate space in current line.
@@ -442,8 +444,10 @@ FACE, NAME, ON-LEFT, and ORDER for details."
                          (t (- 0 (window-hscroll)))))))
        (str (concat
              (unless on-left
-               (propertize " " 'display `((space :align-to (- right ,(sideline--align (1- len-title) offset)))
-                                          (space :width 0))
+               (propertize " "
+                           'display `((space :align-to
+                                             (- right ,(sideline--align title offset)))
+                                      (space :width 0))
                            `cursor t))
              title)))
     ;; Create overlay
