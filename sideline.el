@@ -232,9 +232,16 @@
     (require 'shr)
     (shr-string-pixel-width str)))
 
+(defun sideline--str-no-props (str)
+  "Remove STR's text properties."
+  (with-temp-buffer
+    (insert str)
+    (buffer-substring-no-properties (point-min) (point-max))))
+
 (defun sideline--str-len (str)
   "Calculate STR in pixel width."
   (let ((width (frame-char-width))
+        (str (sideline--str-no-props str))
         (len (sideline--string-pixel-width str)))
     (+ (/ len width)
        (if (zerop (% len width)) 0 1))))  ; add one if exceeed
