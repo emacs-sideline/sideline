@@ -287,6 +287,10 @@ Argument OFFSET is additional calculation from the left/right alignment."
   (list (+ (* (window-font-width) (+ offset (if (display-graphic-p) 0 2)))
            (sideline--string-pixel-width str))))
 
+(defun sideline--get-line ()
+  "Return current line."
+  (sideline--s-replace "\n" "" (thing-at-point 'line t)))
+
 (defun sideline--calc-space (str-len on-left opposing-str-len)
   "Calculate space in current line.
 
@@ -302,7 +306,7 @@ calculate to the right side."
   (setq str-len (+ str-len opposing-str-len))
   ;; Start the calculation!
   (if on-left
-      (let* ((line (sideline--s-replace "\n" "" (thing-at-point 'line t)))
+      (let* ((line (sideline--get-line))
              (column-start (window-hscroll))
              (pos-first (save-excursion (back-to-indentation) (current-column)))
              (pos-end (- (sideline--str-len line) column-start)))
@@ -310,27 +314,28 @@ calculate to the right side."
                (cons column-start pos-first))
               ((= pos-first pos-end)
                (cons column-start (sideline--window-width)))))
-    (let* ((line (sideline--s-replace "\n" "" (thing-at-point 'line t)))
+    (let* ((line (sideline--get-line))
            (column-start (window-hscroll))
            (column-end (+ column-start (sideline--window-width)))
            (pos-end (- (sideline--str-len line) column-start)))
       (when (<= str-len (- column-end pos-end))
         (cons column-end pos-end)))))
 
-(defun sideline--find-line (str-len on-left &optional direction exceeded)
+(defun sideline--find-line (str-len on-left bol eol &optional direction exceeded)
   "Find a line where the string can be inserted.
 
 Argument STR-LEN is the length of the message, use to calculate the alignment.
 
 If argument ON-LEFT is non-nil, it will align to the left instead of right.
 
+Arguments BOL and EOL are cache early for better performance.
+
 See variable `sideline-order' document string for optional argument DIRECTION
 for details.
 
 Optional argument EXCEEDED is set to non-nil when we have already searched
 available lines in both directions (up & down)."
-  (let ((bol (window-start)) (eol (window-end))
-        (occupied-lines (if on-left sideline--occupied-lines-left
+  (let ((occupied-lines (if on-left sideline--occupied-lines-left
                           sideline--occupied-lines-right))
         (going-up (eq direction 'up))
         (skip-first t)
@@ -355,7 +360,7 @@ available lines in both directions (up & down)."
       (setq sideline--occupied-lines-right occupied-lines))
     (or pos-ov
         (and (not exceeded)
-             (sideline--find-line str-len on-left (if going-up 'down 'up) t)))))
+             (sideline--find-line str-len on-left bol eol (if going-up 'down 'up) t)))))
 
 (defun sideline--create-keymap (action candidate)
   "Create keymap for sideline ACTION.
@@ -432,7 +437,8 @@ FACE, NAME, ON-LEFT, and ORDER for details."
           (if on-left (format sideline-format-left text)
             (format sideline-format-right text))))
        (len-title (sideline--str-len title))
-       (pos-ov (sideline--find-line len-title on-left order))
+       (bol (window-start)) (eol (window-end))
+       (pos-ov (sideline--find-line len-title on-left bol eol order))
        (pos-start (car pos-ov)) (pos-end (cdr pos-ov))
        (offset (if (or on-left (zerop (window-hscroll))) 0
                  (save-excursion
