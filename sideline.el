@@ -174,6 +174,8 @@
 ;; (@* "Externals" )
 ;;
 
+(defvar overflow-newline-into-fringe)
+
 (declare-function string-pixel-width "subr-x.el")   ; TODO: remove this after 29.1
 (declare-function shr-string-pixel-width "shr.el")  ; TODO: remove this after 29.1
 
