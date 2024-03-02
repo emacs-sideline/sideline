@@ -280,12 +280,24 @@
       (sideline--str-len str)
     0))  ; not found, then return 0
 
-(defun sideline--align (str offset)
-  "Align sideline STR from the left/right of the window.
+(defun sideline--align-right (str offset)
+  "Align sideline STR from the right of the window.
 
-Argument OFFSET is additional calculation from the left/right alignment."
-  (list (+ (* (window-font-width) (+ offset (if (display-graphic-p) 0 2)))
-           (sideline--string-pixel-width str))))
+ Argument OFFSET is additional calculation from the right alignment."
+  (list (+
+         ;; If the sideline text is displayed without at least 1 pixel gap from the right fringe and
+         ;; overflow-newline-into-fringe is not true, emacs will line wrap it.
+         (if (and (display-graphic-p)
+                  (> (nth 1 (window-fringes)) 0)
+                  (not overflow-newline-into-fringe))
+             1
+           0)
+         (* (window-font-width)
+            (+ offset (if (display-graphic-p)
+                          ;; If right fringe deactivated add 1 offset
+                          (if (= 0 (nth 1 (window-fringes))) 1 0)
+                        1)))
+         (sideline--string-pixel-width str))))
 
 (defun sideline--get-line ()
   "Return current line."
@@ -452,7 +464,7 @@ FACE, NAME, ON-LEFT, and ORDER for details."
              (unless on-left
                (propertize " "
                            'display `((space :align-to
-                                             (- right ,(sideline--align title offset)))
+                                             (- right ,(sideline--align-right title offset)))
                                       (space :width 0))
                            `cursor t))
              title)))
