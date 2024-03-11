@@ -187,7 +187,6 @@
 
 (defun sideline--enable ()
   "Enable `sideline' in current buffer."
-  (ht-clear sideline--overlays)
   (setq sideline--ex-bound-or-point t  ; render immediately
         sideline--text-scale-mode-amount text-scale-mode-amount)
   (add-hook 'post-command-hook #'sideline--post-command nil t))
