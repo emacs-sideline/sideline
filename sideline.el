@@ -449,13 +449,15 @@ Optional argument TYPE is used for recursive `outer' and `inner'."
     (`inner (sideline--display-starting on-left backend-str (if on-left 'right 'left)))
     (`outer (sideline--display-starting on-left backend-str (if on-left 'left 'right)))))
 
-(defun sideline--create-ov (backend candidate action face name on-left order)
+(defun sideline--create-ov (backend candidate action face name on-left order bol eol)
   "Create information (CANDIDATE) overlay.
 
 Argument BACKEND is used to categorize overlays.
 
 See function `sideline--render-candidates' document string for arguments ACTION,
-FACE, NAME, ON-LEFT, and ORDER for details."
+FACE, NAME, ON-LEFT, and ORDER for details.
+
+Arguments BOL and EOL are cached for faster performance."
   (when-let*
       ((backend-str (format sideline-display-backend-format name))
        (text (if sideline-display-backend-name  ; this is the displayed text
@@ -478,7 +480,6 @@ FACE, NAME, ON-LEFT, and ORDER for details."
           (if on-left (format sideline-format-left text)
             (format sideline-format-right text))))
        (len-title (sideline--str-len title))
-       (bol (window-start)) (eol (sideline--window-end))
        (pos-ov (sideline--find-line len-title on-left bol eol order))
        (pos-start (car pos-ov)) (pos-end (cdr pos-ov))
        (offset (if (or on-left (zerop (window-hscroll))) 0
@@ -541,9 +542,10 @@ Argument ORDER determined the search order for going up or down."
         (action (sideline--call-backend backend 'action))
         (face (or (sideline--call-backend backend 'face) 'sideline-default))
         (name (or (sideline--call-backend backend 'name)
-                  (sideline--guess-backend-name backend))))
+                  (sideline--guess-backend-name backend)))
+        (bol (window-start)) (eol (sideline--window-end)))
     (dolist (candidate candidates)
-      (sideline--create-ov backend candidate action face name on-left order))))
+      (sideline--create-ov backend candidate action face name on-left order bol eol))))
 
 ;;
 ;; (@* "Core" )
