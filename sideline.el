@@ -157,7 +157,7 @@
   :type 'function
   :group 'sideline)
 
-(defvar-local sideline--overlays (make-hash-table)
+(defvar-local sideline--overlays nil
   "Displayed overlays.")
 
 (defvar-local sideline--ex-bound-or-point nil
@@ -187,6 +187,10 @@
 
 (defun sideline--enable ()
   "Enable `sideline' in current buffer."
+  ;; XXX: Still don't know why local variable doesn't work!
+  (progn
+    (sideline--delete-ovs)
+    (setq-local sideline--overlays (make-hash-table)))
   (setq sideline--ex-bound-or-point t  ; render immediately
         sideline--text-scale-mode-amount text-scale-mode-amount)
   (add-hook 'post-command-hook #'sideline--post-command nil t))
@@ -257,6 +261,17 @@
 (defun sideline--column-to-point (column)
   "Convert COLUMN to point."
   (save-excursion (move-to-column (max column 0)) (point)))
+
+(defun sideline--modeline-height ()
+  "Return lines modeline cost."
+  (ceiling (/ (float (window-mode-line-height)) (frame-char-height))))
+
+(defun sideline--window-end ()
+  "Return the accurate window end position."
+  (save-excursion
+    (goto-char (window-end))
+    (forward-line (- 0 (sideline--modeline-height)))
+    (line-beginning-position)))
 
 (defun sideline--window-width ()
   "Correct window width for sideline."
@@ -463,7 +478,7 @@ FACE, NAME, ON-LEFT, and ORDER for details."
           (if on-left (format sideline-format-left text)
             (format sideline-format-right text))))
        (len-title (sideline--str-len title))
-       (bol (window-start)) (eol (window-end))
+       (bol (window-start)) (eol (sideline--window-end))
        (pos-ov (sideline--find-line len-title on-left bol eol order))
        (pos-start (car pos-ov)) (pos-end (cdr pos-ov))
        (offset (if (or on-left (zerop (window-hscroll))) 0
