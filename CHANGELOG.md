@@ -18,6 +18,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 * Fix alignment issue when text-scale amount is not zero (8a981bc41f0169d2b6553988bd091d4eaf5bd134)
 * Upgrade rendering with opposing length (#11)
 * Better construct backend name (b63cea69948d386f007004ba6a272fc0e944ffb9)
+* feat: Categorize overlays by backend name (0d63da5246c49e3059680ebb02f64a2c3bb914e8)
 
 ## 0.1.1
 > Released Jun 15, 2022
