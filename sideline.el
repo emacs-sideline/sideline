@@ -157,7 +157,7 @@
   :type 'function
   :group 'sideline)
 
-(defvar-local sideline--overlays nil
+(defvar-local sideline--overlays (make-hash-table)
   "Displayed overlays.")
 
 (defvar-local sideline--ex-bound-or-point nil
