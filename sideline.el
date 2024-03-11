@@ -599,6 +599,9 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
 (defvar-local sideline--delay-timer nil
   "Timer for delay.")
 
+(defvar-local sideline--ex-window nil
+  "Holds previous window.")
+
 (defvar-local sideline--ex-window-start nil
   "Holds previous window start point; this will detect vertical scrolling.")
 
@@ -608,16 +611,19 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
 (defun sideline--do-render-p ()
   "Return non-nil if we should re-render sidelines in the post-command."
   (let ((bound-or-point (or (bounds-of-thing-at-point 'symbol) (point)))
+        (window (selected-window))
         (win-start (window-start))
         (win-hscroll (window-hscroll)))
     (when  ; conditions allow to re-render sidelines
         (or (not (equal sideline--ex-bound-or-point bound-or-point))
             (not (equal sideline--text-scale-mode-amount text-scale-mode-amount))
+            (not (equal sideline--ex-window window))
             (not (equal sideline--ex-window-start win-start))
             (not (equal sideline--ex-window-hscroll win-hscroll)))
       ;; update
       (setq sideline--ex-bound-or-point bound-or-point
             sideline--text-scale-mode-amount text-scale-mode-amount
+            sideline--ex-window window
             sideline--ex-window-start win-start
             sideline--ex-window-hscroll win-hscroll)
       t)))
