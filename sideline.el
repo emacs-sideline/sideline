@@ -494,7 +494,6 @@ FACE, NAME, ON-LEFT, and ORDER for details."
                (overlay-put ov 'invisible t)))
             (t (overlay-put ov 'before-string str)))
       (overlay-put ov 'window (selected-window))
-      (overlay-put ov 'buffer (current-buffer))
       (overlay-put ov 'priority (if on-left sideline-priority
                                   ;; Add 1 to render on the same line!
                                   (1+ sideline-priority)))
