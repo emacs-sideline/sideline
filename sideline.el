@@ -6,7 +6,7 @@
 ;; Author: Shen, Jen-Chieh <jcs090218@gmail.com>
 ;; URL: https://github.com/emacs-sideline/sideline
 ;; Version: 0.1.1
-;; Package-Requires: ((emacs "27.1"))
+;; Package-Requires: ((emacs "27.1") (ht "2.4"))
 ;; Keywords: convenience
 
 ;; This file is NOT part of GNU Emacs.
@@ -46,6 +46,8 @@
 (require 'face-remap)
 (require 'rect)
 (require 'subr-x)
+
+(require 'ht)
 
 (defgroup sideline nil
   "Show information on the side."
@@ -155,7 +157,7 @@
   :type 'function
   :group 'sideline)
 
-(defvar-local sideline--overlays nil
+(defvar-local sideline--overlays (ht-create)
   "Displayed overlays.")
 
 (defvar-local sideline--ex-bound-or-point nil
@@ -185,6 +187,7 @@
 
 (defun sideline--enable ()
   "Enable `sideline' in current buffer."
+  (ht-clear sideline--overlays)
   (setq sideline--ex-bound-or-point t  ; render immediately
         sideline--text-scale-mode-amount text-scale-mode-amount)
   (add-hook 'post-command-hook #'sideline--post-command nil t))
@@ -391,9 +394,17 @@ Argument CANDIDATE is the data for users."
 ;; (@* "Overlays" )
 ;;
 
+(defun sideline-delete-ovs (backend)
+  "Delete overlays from BACKEND."
+  (mapc #'delete-overlay (ht-get sideline--overlays backend))
+  (ht-set sideline--overlays backend nil))
+
 (defun sideline--delete-ovs ()
   "Clean up all overlays."
-  (mapc #'delete-overlay sideline--overlays))
+  (ht-map (lambda (_key value)
+            (mapc #'delete-overlay value))
+          sideline--overlays)
+  (ht-clear sideline--overlays))
 
 (defun sideline--display-string (on-left backend-str candidate &optional type)
   "Return the display string to render the text correctly.
@@ -424,8 +435,10 @@ Optional argument TYPE is used for recursive `outer' and `inner'."
     (`inner (sideline--display-starting on-left backend-str (if on-left 'right 'left)))
     (`outer (sideline--display-starting on-left backend-str (if on-left 'left 'right)))))
 
-(defun sideline--create-ov (candidate action face name on-left order)
+(defun sideline--create-ov (backend candidate action face name on-left order)
   "Create information (CANDIDATE) overlay.
+
+Argument BACKEND is used to categorize overlays.
 
 See function `sideline--render-candidates' document string for arguments ACTION,
 FACE, NAME, ON-LEFT, and ORDER for details."
@@ -486,7 +499,9 @@ FACE, NAME, ON-LEFT, and ORDER for details."
                                   ;; Add 1 to render on the same line!
                                   (1+ sideline-priority)))
       (overlay-put ov 'creator 'sideline)
-      (push ov sideline--overlays))))
+      (unless (gethash backend sideline--overlays)
+        (setf (gethash backend sideline--overlays) nil))
+      (push ov (gethash backend sideline--overlays)))))
 
 ;;
 ;; (@* "Async" )
@@ -514,7 +529,7 @@ Argument ORDER determined the search order for going up or down."
         (name (or (sideline--call-backend backend 'name)
                   (sideline--guess-backend-name backend))))
     (dolist (candidate candidates)
-      (sideline--create-ov candidate action face name on-left order))))
+      (sideline--create-ov backend candidate action face name on-left order))))
 
 ;;
 ;; (@* "Core" )
