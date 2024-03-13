@@ -408,13 +408,34 @@ Argument CANDIDATE is the data for users."
 ;; (@* "Overlays" )
 ;;
 
-(defun sideline-delete-ovs (backend)
+(defun sideline-backend-ovs (backend)
+  "Return overlays for BACKEND."
+  (sideline--overlays-in 'backend backend))
+
+(defun sideline-delete-backend-ovs (backend)
   "Delete overlays from BACKEND."
-  (mapc #'delete-overlay (ht-get sideline--overlays backend))
+  (dolist (ov (ht-get sideline--overlays backend))
+    (let ((on-left (overlay-get ov 'left))
+          (start (overlay-start ov)))
+      (if on-left
+          (setq sideline--occupied-lines-left
+                (delete start sideline--occupied-lines-left))
+        (setq sideline--occupied-lines-right
+              (delete start sideline--occupied-lines-right))))
+    (delete-overlay ov))
   (ht-set sideline--overlays backend nil))
+
+(defun sideline--reset-occupied-lines ()
+  "Reset occupied lines."
+  (let ((mark (list (line-beginning-position))))
+    (setq sideline--occupied-lines-left
+          (if sideline-backends-left-skip-current-line mark nil))
+    (setq sideline--occupied-lines-right
+          (if sideline-backends-right-skip-current-line mark nil))))
 
 (defun sideline--delete-ovs ()
   "Clean up all overlays."
+  (sideline--reset-occupied-lines)
   (ht-map (lambda (_key value)
             (mapc #'delete-overlay value))
           sideline--overlays)
@@ -509,11 +530,13 @@ Arguments BOL and EOL are cached for faster performance."
                (overlay-put ov 'display str)
                (overlay-put ov 'invisible t)))
             (t (overlay-put ov 'before-string str)))
-      (overlay-put ov 'window (selected-window))
+      (overlay-put ov 'window (get-buffer-window))
       (overlay-put ov 'priority (if on-left sideline-priority
                                   ;; Add 1 to render on the same line!
                                   (1+ sideline-priority)))
       (overlay-put ov 'creator 'sideline)
+      (overlay-put ov 'backend backend)
+      (overlay-put ov 'on-left on-left)
       (unless (gethash backend sideline--overlays)
         (setf (gethash backend sideline--overlays) nil))
       (push ov (gethash backend sideline--overlays)))))
@@ -585,11 +608,6 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
   "Render sideline once in the BUFFER."
   (sideline--with-buffer (or buffer (current-buffer))
     (unless (funcall sideline-inhibit-display-function)
-      (let ((mark (list (line-beginning-position))))
-        (setq sideline--occupied-lines-left
-              (if sideline-backends-left-skip-current-line mark nil))
-        (setq sideline--occupied-lines-right
-              (if sideline-backends-right-skip-current-line mark nil)))
       (sideline--delete-ovs)  ; for function call externally
       (run-hooks 'sideline-pre-render-hook)
       (sideline--render-backends sideline-backends-left t)
