@@ -371,25 +371,27 @@ available lines in both directions (up & down)."
         (going-up (eq direction 'up))
         (skip-first t)
         (break-it)
-        (pos-ov))
+        (data))
     (save-excursion
       (while (not break-it)
         (if skip-first (setq skip-first nil)
           (forward-line (if going-up -1 1)))
         (unless (if going-up (<= bol (point)) (<= (point) eol))
           (setq break-it t))
-        (when (and (not (memq (line-beginning-position) occupied-lines))
-                   (not break-it))
-          (when-let ((col (sideline--calc-space str-len on-left (sideline--opposing-str-len))))
-            (setq pos-ov (cons (sideline--column-to-point (car col))
-                               (sideline--column-to-point (cdr col))))
-            (setq break-it t)
-            (push (line-beginning-position) occupied-lines)))
+        (when-let* ((occ-bol (line-beginning-position))
+                    ((and (not (memq occ-bol occupied-lines))
+                          (not break-it)))
+                    (col (sideline--calc-space str-len on-left (sideline--opposing-str-len))))
+          (setq data (list (sideline--column-to-point (car col))
+                           (sideline--column-to-point (cdr col))
+                           occ-bol))
+          (setq break-it t)
+          (push occ-bol occupied-lines))
         (when (if going-up (bobp) (eobp)) (setq break-it t))))
     (if on-left
         (setq sideline--occupied-lines-left occupied-lines)
       (setq sideline--occupied-lines-right occupied-lines))
-    (or pos-ov
+    (or data
         (and (not exceeded)
              (sideline--find-line str-len on-left bol eol (if going-up 'down 'up) t)))))
 
@@ -416,12 +418,12 @@ Argument CANDIDATE is the data for users."
   "Delete overlays from BACKEND."
   (dolist (ov (ht-get sideline--overlays backend))
     (let ((on-left (overlay-get ov 'left))
-          (start (overlay-start ov)))
+          (occ-pt (overlay-get ov 'occ-pt)))
       (if on-left
           (setq sideline--occupied-lines-left
-                (delete start sideline--occupied-lines-left))
+                (delete occ-pt sideline--occupied-lines-left))
         (setq sideline--occupied-lines-right
-              (delete start sideline--occupied-lines-right))))
+              (delete occ-pt sideline--occupied-lines-right))))
     (delete-overlay ov))
   (ht-set sideline--overlays backend nil))
 
@@ -501,8 +503,8 @@ Arguments BOL and EOL are cached for faster performance."
           (if on-left (format sideline-format-left text)
             (format sideline-format-right text))))
        (len-title (sideline--str-len title))
-       (pos-ov (sideline--find-line len-title on-left bol eol order))
-       (pos-start (car pos-ov)) (pos-end (cdr pos-ov))
+       (data (sideline--find-line len-title on-left bol eol order))
+       (pos-start (nth 0 data)) (pos-end (nth 1 data)) (occ-pt (nth 2 data))
        (offset (if (or on-left (zerop (window-hscroll))) 0
                  (save-excursion
                    (goto-char pos-start)
@@ -537,6 +539,7 @@ Arguments BOL and EOL are cached for faster performance."
       (overlay-put ov 'creator 'sideline)
       (overlay-put ov 'backend backend)
       (overlay-put ov 'on-left on-left)
+      (overlay-put ov 'occ-pt occ-pt)
       (unless (gethash backend sideline--overlays)
         (setf (gethash backend sideline--overlays) nil))
       (push ov (gethash backend sideline--overlays)))))
