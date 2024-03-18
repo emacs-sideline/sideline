@@ -232,16 +232,11 @@
   `(when (buffer-live-p ,buffer-or-name)
      (with-current-buffer ,buffer-or-name ,@body)))
 
-(defun sideline--str-no-props (str)
-  "Remove STR's text properties."
-  (with-temp-buffer
-    (insert str)
-    (buffer-substring-no-properties (point-min) (point-max))))
-
 ;; TODO: Use function `string-pixel-width' after 29.1
 (defun sideline--string-pixel-width (str)
   "Return the width of STR in pixels."
-  (let ((str (sideline--str-no-props str)))
+  ;; Text properties may effect the length, remove it!
+  (let ((str (substring-no-properties str)))
     (if (fboundp #'string-pixel-width)
         (string-pixel-width str)
       (require 'shr)
@@ -302,7 +297,7 @@
 (defun sideline--align-right (str offset)
   "Align sideline STR from the right of the window.
 
- Argument OFFSET is additional calculation from the right alignment."
+Argument OFFSET is additional calculation from the right alignment."
   (list (+
          ;; If the sideline text is displayed without at least 1 pixel gap from the right fringe and
          ;; overflow-newline-into-fringe is not true, emacs will line wrap it.
