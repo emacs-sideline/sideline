@@ -232,16 +232,11 @@
   `(when (buffer-live-p ,buffer-or-name)
      (with-current-buffer ,buffer-or-name ,@body)))
 
-(defun sideline--str-no-props (str)
-  "Remove STR's text properties."
-  (with-temp-buffer
-    (insert str)
-    (buffer-substring-no-properties (point-min) (point-max))))
-
 ;; TODO: Use function `string-pixel-width' after 29.1
 (defun sideline--string-pixel-width (str)
   "Return the width of STR in pixels."
-  (let ((str (sideline--str-no-props str)))
+  ;; Text properties may effect the length, remove it!
+  (let ((str (substring-no-properties str)))
     (if (fboundp #'string-pixel-width)
         (string-pixel-width str)
       (require 'shr)
