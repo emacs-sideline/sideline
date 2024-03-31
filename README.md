@@ -134,12 +134,13 @@ Here is a list of supported commands:
 
 ## 📂 Example projects
 
-* [sideline-blame](https://github.com/emacs-sideline/sideline-blame)
-* [sideline-flycheck](https://github.com/jcs-elpa/sideline-flycheck)
-* [sideline-flymake](https://github.com/emacs-sideline/sideline-flymake)
-* [sideline-lsp](https://github.com/jcs-elpa/sideline-lsp)
-* [sideline-eldoc](https://github.com/ginqi7/sideline-eldoc)
-* [sideline-color](https://github.com/emacs-sideline/sideline-color)
+- [sideline-blame](https://github.com/emacs-sideline/sideline-blame)
+- [sideline-flycheck](https://github.com/jcs-elpa/sideline-flycheck)
+- [sideline-flymake](https://github.com/emacs-sideline/sideline-flymake)
+- [sideline-lsp](https://github.com/jcs-elpa/sideline-lsp)
+- [sideline-eldoc](https://github.com/ginqi7/sideline-eldoc)
+- [sideline-color](https://github.com/emacs-sideline/sideline-color)
+- [sideline-load-cost](https://github.com/emacs-sideline/sideline-load-cost)
 
 ## 🛠️ Contribute
 
