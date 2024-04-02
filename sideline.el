@@ -220,6 +220,10 @@
 ;; (@* "Util" )
 ;;
 
+(defun sideline-2str (obj)
+  "Convert OBJ to string."
+  (format "%s" obj))
+
 ;; Copied from s.el
 (defun sideline--s-replace (old new s)
   "Replace OLD with NEW in S."
@@ -547,7 +551,7 @@ Arguments BOL and EOL are cached for faster performance."
 
 (defun sideline--guess-backend-name (backend)
   "Guess BACKEND's name."
-  (let ((name (format "%s" backend)))
+  (let ((name (sideline-2str backend)))
     (setq name (sideline--s-replace "sideline-" "" name)
           name (sideline--s-replace "-sideline" "" name))
     name))
@@ -608,7 +612,7 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
   "Render sideline once in the BUFFER."
   (sideline--with-buffer (or buffer (current-buffer))
     (unless (funcall sideline-inhibit-display-function)
-      (sideline--delete-ovs)  ; for function call externally
+      ;;(sideline--delete-ovs)  ; for function call externally
       (run-hooks 'sideline-pre-render-hook)
       (sideline--render-backends sideline-backends-left t)
       (sideline--render-backends sideline-backends-right nil)
