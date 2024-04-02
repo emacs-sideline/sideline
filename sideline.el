@@ -193,7 +193,7 @@
     (setq-local sideline--overlays (make-hash-table)))
   (setq sideline--ex-bound-or-point t  ; render immediately
         sideline--text-scale-mode-amount text-scale-mode-amount)
-  (add-hook 'post-command-hook #'sideline--post-command nil t))
+  (add-hook 'post-command-hook #'sideline--post-command -90 t))
 
 (defun sideline--disable ()
   "Disable `sideline' in current buffer."
