@@ -178,9 +178,6 @@
 
 (defvar overflow-newline-into-fringe)
 
-(declare-function string-pixel-width "subr-x.el")   ; TODO: remove this after 29.1
-(declare-function shr-string-pixel-width "shr.el")  ; TODO: remove this after 29.1
-
 ;;
 ;; (@* "Entry" )
 ;;
@@ -242,19 +239,25 @@
               (/ 1.0 (expt text-scale-mode-step
                            text-scale-mode-amount)))))
 
-;; TODO: Use function `string-pixel-width' after 29.1
-(defun sideline--string-pixel-width (str)
-  "Return the width of STR in pixels."
-  ;; Text properties may effect the length, remove it!
-  (let ((str (substring-no-properties str)))
-    (if (fboundp #'string-pixel-width)
-        (string-pixel-width str)
-      (require 'shr)
-      (shr-string-pixel-width str))))
+(defun sideline--string-pixel-width (string)
+  "Return the width of STRING in pixels.
+
+Sideline's own version of `string-pixel-width'
+which respect the `face-remapping-alist'."
+  (if (zerop (length string))
+      0
+    (let ((remapping-alist face-remapping-alist))
+      ;; Prevent use original buffer name for minimal side-effects
+      (with-current-buffer (get-buffer-create " *sideline-string-pixel-width*")
+        (setq-local display-line-numbers nil)
+        (delete-region (point-min) (point-max))
+        (setq-local face-remapping-alist remapping-alist)
+        (insert string)
+        (car (buffer-text-pixel-size nil nil t))))))
 
 (defun sideline--str-len (str)
   "Calculate STR in pixel width."
-  (let ((width (frame-char-width))
+  (let ((width (window-font-width))
         (len (sideline--string-pixel-width str)))
     (+ (/ len width)
        (if (zerop (% len width)) 0 1))))  ; add one if exceeed
@@ -311,20 +314,20 @@ Argument OFFSET is additional calculation from the right alignment."
   (let ((graphic-p (display-graphic-p))
         (fringes (window-fringes)))
     (list  ; use pixel instead of character unit
-     (* (window-font-width)
-        (+ offset
-           ;; If the sideline text is displayed without at least 1 pixel gap from the right fringe and
-           ;; overflow-newline-into-fringe is not true, emacs will line wrap it.
-           (if (and graphic-p
-                    (> (nth 1 fringes) 0)
-                    (not overflow-newline-into-fringe))
-               1
-             0)
-           (if graphic-p
-               ;; If right fringe deactivated add 1 offset
-               (if (= 0 (nth 1 fringes)) 1 0)
-             1)
-           (sideline--str-len str))))))
+     (+ (sideline--string-pixel-width str)
+        (* (window-font-width)
+           (+ offset
+              ;; If the sideline text is displayed without at least 1 pixel gap from the right fringe and
+              ;; overflow-newline-into-fringe is not true, emacs will line wrap it.
+              (if (and graphic-p
+                       (> (nth 1 fringes) 0)
+                       (not overflow-newline-into-fringe))
+                  1
+                0)
+              (if graphic-p
+                  ;; If right fringe deactivated add 1 offset
+                  (if (= 0 (nth 1 fringes)) 1 0)
+                1)))))))
 
 (defun sideline--get-line ()
   "Return current line."
