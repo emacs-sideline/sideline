@@ -236,6 +236,12 @@
   `(when (buffer-live-p ,buffer-or-name)
      (with-current-buffer ,buffer-or-name ,@body)))
 
+(defun sideline--window-hscroll ()
+  "Like function `window-hscroll' but take more stuff into account."
+  (ceiling (* (window-hscroll)
+              (/ 1.0 (expt text-scale-mode-step
+                           text-scale-mode-amount)))))
+
 ;; TODO: Use function `string-pixel-width' after 29.1
 (defun sideline--string-pixel-width (str)
   "Return the width of STR in pixels."
@@ -304,7 +310,9 @@
 Argument OFFSET is additional calculation from the right alignment."
   (let ((graphic-p (display-graphic-p))
         (fringes (window-fringes)))
-    (list (+
+    (list  ; use pixel instead of character unit
+     (* (window-font-width)
+        (+ offset
            ;; If the sideline text is displayed without at least 1 pixel gap from the right fringe and
            ;; overflow-newline-into-fringe is not true, emacs will line wrap it.
            (if (and graphic-p
@@ -312,12 +320,11 @@ Argument OFFSET is additional calculation from the right alignment."
                     (not overflow-newline-into-fringe))
                1
              0)
-           (* (window-font-width)
-              (+ offset (if graphic-p
-                            ;; If right fringe deactivated add 1 offset
-                            (if (= 0 (nth 1 fringes)) 1 0)
-                          1)
-                 (sideline--str-len str)))))))
+           (if graphic-p
+               ;; If right fringe deactivated add 1 offset
+               (if (= 0 (nth 1 fringes)) 1 0)
+             1)
+           (sideline--str-len str))))))
 
 (defun sideline--get-line ()
   "Return current line."
@@ -339,17 +346,19 @@ calculate to the right side."
   ;; Start the calculation!
   (if on-left
       (let* ((line (sideline--get-line))
-             (column-start (window-hscroll))
+             (column-start (sideline--window-hscroll))
              (pos-first (save-excursion (back-to-indentation) (current-column)))
-             (pos-end (- (sideline--str-len line) column-start)))
+             (pos-end (max (- (sideline--str-len line) column-start)
+                           column-start)))
         (cond ((<= str-len (- pos-first column-start))
                (cons column-start pos-first))
               ((= pos-first pos-end)
                (cons column-start (sideline--window-width)))))
     (let* ((line (sideline--get-line))
-           (column-start (window-hscroll))
+           (column-start (sideline--window-hscroll))
            (column-end (+ column-start (sideline--window-width)))
-           (pos-end (- (sideline--str-len line) column-start)))
+           (pos-end (max (- (sideline--str-len line) column-start)
+                         column-start)))
       (when (<= str-len (- column-end pos-end))
         (cons column-end pos-end)))))
 
@@ -506,14 +515,7 @@ Arguments BOL and EOL are cached for faster performance."
        (len-title (sideline--str-len title))
        (data (sideline--find-line len-title on-left bol eol order))
        (pos-start (nth 0 data)) (pos-end (nth 1 data)) (occ-pt (nth 2 data))
-       (offset (if (or on-left (zerop (window-hscroll))) 0
-                 (save-excursion
-                   (goto-char pos-start)
-                   (end-of-line)
-                   (cond ((zerop (current-column)) 0)
-                         ((<= (current-column) (window-hscroll))
-                          (- 0 (current-column)))
-                         (t (- 0 (window-hscroll)))))))
+       (offset (- 0 (sideline--window-hscroll)))
        (str (concat
              (unless on-left
                (propertize " "
