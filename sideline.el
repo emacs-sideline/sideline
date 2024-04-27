@@ -256,11 +256,8 @@ which respect the `face-remapping-alist'."
         (car (buffer-text-pixel-size nil nil t))))))
 
 (defun sideline--str-len (str)
-  "Calculate STR in pixel width."
-  (let ((width (window-font-width))
-        (len (sideline--string-pixel-width str)))
-    (+ (/ len width)
-       (if (zerop (% len width)) 0 1))))  ; add one if exceeed
+  "Calculate STR length."
+  (length str))
 
 (defun sideline--kill-timer (timer)
   "Kill TIMER."
