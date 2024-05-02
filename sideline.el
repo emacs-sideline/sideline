@@ -187,6 +187,8 @@
 
 (defun sideline--enable ()
   "Enable `sideline' in current buffer."
+  (setq sideline-backends-left (cl-remove-if #'null sideline-backends-left)
+        sideline-backends-right (cl-remove-if #'null sideline-backends-right))
   ;; XXX: Still don't know why local variable doesn't work!
   (progn
     (sideline--delete-ovs)
