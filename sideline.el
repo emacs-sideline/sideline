@@ -172,6 +172,9 @@
 (defvar-local sideline--text-scale-mode-amount nil
   "Record of last variable `text-scale-mode-amount'.")
 
+(defvar-local sideline-render-this-post-command nil
+  "If this is non-nil, re-render this post-command.")
+
 ;;
 ;; (@* "Externals" )
 ;;
@@ -655,14 +658,16 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
             (not (equal sideline--ex-window window))
             (not (equal sideline--ex-window-start win-start))
             (not (equal sideline--ex-window-hscroll win-hscroll))
-            (not (equal sideline--ex-face-remapping-alist remapping-alist)))
+            (not (equal sideline--ex-face-remapping-alist remapping-alist))
+            sideline-render-this-post-command)
       ;; update
       (setq sideline--ex-bound-or-point bound-or-point
             sideline--text-scale-mode-amount text-scale-mode-amount
             sideline--ex-window window
             sideline--ex-window-start win-start
             sideline--ex-window-hscroll win-hscroll
-            sideline--ex-face-remapping-alist remapping-alist)
+            sideline--ex-face-remapping-alist remapping-alist
+            sideline-render-this-post-command nil)
       t)))
 
 (defun sideline--post-command ()
@@ -673,6 +678,11 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
     (setq sideline--delay-timer
           (run-with-idle-timer sideline-delay nil #'sideline-render (current-buffer)))
     (run-hooks 'sideline-reset-hook)))
+
+;;;###autoload
+(defun sideline-render-this (&rest _)
+  "Use to force render the next post command."
+  (setq sideline-render-this-post-command t))
 
 (defun sideline--reset ()
   "Clean up for next use."
