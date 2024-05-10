@@ -247,19 +247,18 @@
 ;; TODO: Use function `string-pixel-width' after 29.1
 (defun sideline--string-pixel-width (str)
   "Return the width of STR in pixels."
-  ;; Text properties may effect the length, remove it!
-  (let ((str (substring-no-properties str))
-        (remapping-alist face-remapping-alist))
-    (if (fboundp #'buffer-text-pixel-size)
-        ;; Prevent use original buffer name for minimal side-effects
-        (with-current-buffer (get-buffer-create " *sideline-string-pixel-width*")
-          (setq-local display-line-numbers nil)
-          (delete-region (point-min) (point-max))
-          (setq-local face-remapping-alist remapping-alist)
-          (insert str)
-          (car (buffer-text-pixel-size nil nil t)))
-      (require 'shr)
-      (shr-string-pixel-width str))))
+  (cond ((fboundp #'buffer-text-pixel-size)
+         (let ((remapping-alist face-remapping-alist))
+           ;; Prevent use original buffer name for minimal side-effects
+           (with-current-buffer (get-buffer-create " *sideline-string-pixel-width*")
+             (setq-local display-line-numbers nil)
+             (delete-region (point-min) (point-max))
+             (setq-local face-remapping-alist remapping-alist)
+             (insert str)
+             (car (buffer-text-pixel-size nil nil t)))))
+        (t
+         (require 'shr)
+         (shr-string-pixel-width str))))
 
 (defun sideline--str-len (str)
   "Calculate STR in pixel width."
@@ -640,24 +639,30 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
 (defvar-local sideline--ex-window-hscroll nil
   "Holds previous window hscroll; this will detect horizontal scrolling.")
 
+(defvar-local sideline--ex-face-remapping-alist nil
+  "Holds previous face remapping alist.")
+
 (defun sideline--do-render-p ()
   "Return non-nil if we should re-render sidelines in the post-command."
   (let ((bound-or-point (or (bounds-of-thing-at-point 'symbol) (point)))
         (window (selected-window))
         (win-start (window-start))
-        (win-hscroll (window-hscroll)))
+        (win-hscroll (window-hscroll))
+        (remapping-alist face-remapping-alist))
     (when  ; conditions allow to re-render sidelines
         (or (not (equal sideline--ex-bound-or-point bound-or-point))
             (not (equal sideline--text-scale-mode-amount text-scale-mode-amount))
             (not (equal sideline--ex-window window))
             (not (equal sideline--ex-window-start win-start))
-            (not (equal sideline--ex-window-hscroll win-hscroll)))
+            (not (equal sideline--ex-window-hscroll win-hscroll))
+            (not (equal sideline--ex-face-remapping-alist remapping-alist)))
       ;; update
       (setq sideline--ex-bound-or-point bound-or-point
             sideline--text-scale-mode-amount text-scale-mode-amount
             sideline--ex-window window
             sideline--ex-window-start win-start
-            sideline--ex-window-hscroll win-hscroll)
+            sideline--ex-window-hscroll win-hscroll
+            sideline--ex-face-remapping-alist remapping-alist)
       t)))
 
 (defun sideline--post-command ()
