@@ -248,15 +248,22 @@
 (defun sideline--string-pixel-width (str)
   "Return the width of STR in pixels."
   ;; Text properties may effect the length, remove it!
-  (let ((str (substring-no-properties str)))
-    (if (fboundp #'string-pixel-width)
-        (string-pixel-width str)
+  (let ((str (substring-no-properties str))
+        (remapping-alist face-remapping-alist))
+    (if (fboundp #'buffer-text-pixel-size)
+        ;; Prevent use original buffer name for minimal side-effects
+        (with-current-buffer (get-buffer-create " *sideline-string-pixel-width*")
+          (setq-local display-line-numbers nil)
+          (delete-region (point-min) (point-max))
+          (setq-local face-remapping-alist remapping-alist)
+          (insert str)
+          (car (buffer-text-pixel-size nil nil t)))
       (require 'shr)
       (shr-string-pixel-width str))))
 
 (defun sideline--str-len (str)
   "Calculate STR in pixel width."
-  (let ((width (frame-char-width))
+  (let ((width (window-font-width))
         (len (sideline--string-pixel-width str)))
     (+ (/ len width)
        (if (zerop (% len width)) 0 1))))  ; add one if exceeed
@@ -313,20 +320,20 @@ Argument OFFSET is additional calculation from the right alignment."
   (let ((graphic-p (display-graphic-p))
         (fringes (window-fringes)))
     (list  ; use pixel instead of character unit
-     (* (window-font-width)
-        (+ offset
-           ;; If the sideline text is displayed without at least 1 pixel gap from the right fringe and
-           ;; overflow-newline-into-fringe is not true, emacs will line wrap it.
-           (if (and graphic-p
-                    (> (nth 1 fringes) 0)
-                    (not overflow-newline-into-fringe))
-               1
-             0)
-           (if graphic-p
-               ;; If right fringe deactivated add 1 offset
-               (if (= 0 (nth 1 fringes)) 1 0)
-             1)
-           (sideline--str-len str))))))
+     (+ (sideline--string-pixel-width str)
+        (* (window-font-width)
+           (+ offset
+              ;; If the sideline text is displayed without at least 1 pixel gap from the right fringe and
+              ;; overflow-newline-into-fringe is not true, emacs will line wrap it.
+              (if (and graphic-p
+                       (> (nth 1 fringes) 0)
+                       (not overflow-newline-into-fringe))
+                  1
+                0)
+              (if graphic-p
+                  ;; If right fringe deactivated add 1 offset
+                  (if (= 0 (nth 1 fringes)) 1 0)
+                1)))))))
 
 (defun sideline--get-line ()
   "Return current line."
@@ -346,21 +353,23 @@ calculate to the right side."
   ;; This is smart since we add up the string size before the calculation!
   (setq str-len (+ str-len opposing-str-len))
   ;; Start the calculation!
-  (if on-left
-      (let* ((line (sideline--get-line))
-             (column-start (sideline--window-hscroll))
-             (pos-first (save-excursion (back-to-indentation) (current-column)))
+  (let ((line (sideline--get-line))
+        (column-start (sideline--window-hscroll))
+        (win-width (sideline--window-width)))
+    (cond
+     ((> str-len win-width) nil)
+     (on-left
+      (let* ((pos-first (save-excursion (back-to-indentation) (current-column)))
              (pos-end (max (sideline--str-len line) column-start)))
         (cond ((<= str-len (- pos-first column-start))
                (cons column-start pos-first))
               ((= pos-first pos-end)
-               (cons column-start (sideline--window-width)))))
-    (let* ((line (sideline--get-line))
-           (column-start (sideline--window-hscroll))
-           (column-end (+ column-start (sideline--window-width)))
-           (pos-end (max (sideline--str-len line) column-start)))
-      (when (<= str-len (- column-end pos-end))
-        (cons column-end pos-end)))))
+               (cons column-start win-width)))))
+     (t
+      (let* ((column-end (+ column-start win-width))
+             (pos-end (max (sideline--str-len line) column-start)))
+        (when (<= str-len (- column-end pos-end))
+          (cons column-end pos-end)))))))
 
 (defun sideline--find-line (str-len on-left bol eol &optional direction exceeded)
   "Find a line where the string can be inserted.
