@@ -283,7 +283,7 @@
   "Return the accurate window end position."
   (save-excursion
     (goto-char (window-end))
-    (forward-line (- 0 (sideline--modeline-height)))
+    (forward-visible-line (- 0 (sideline--modeline-height)))
     (line-beginning-position)))
 
 (defun sideline--window-width ()
@@ -393,7 +393,7 @@ available lines in both directions (up & down)."
     (save-excursion
       (while (not break-it)
         (if skip-first (setq skip-first nil)
-          (forward-line (if going-up -1 1)))
+          (forward-visible-line (if going-up -1 1)))
         (unless (if going-up (<= bol (point)) (<= (point) eol))
           (setq break-it t))
         (when-let* ((occ-bol (line-beginning-position))
