@@ -132,7 +132,9 @@ Here is a list of supported commands:
 * `face` - (optional) face overrides the default sideline face
 * `name` - (optional) backend name to display
 
-## 📇 How to force render the sideline on the next command?
+## ❓ FAQ
+
+### 💫 How to force render the sideline on the next command?
 
 You can force update sideline by adding a hook or advice with the function
 `sideline-render-this`.
