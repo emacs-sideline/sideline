@@ -21,6 +21,8 @@ left/right side of the buffer window.
   - [🔨 Quickstart](#🔨-quickstart)
     - [👥 Configure backends](#👥-configure-backends)
   - [📌 Define your own backend](#📌-define-your-own-backend)
+  - [❓ FAQ](#❓-faq)
+    - [💫 How to force render the sideline on the next command?](#💫-how-to-force-render-the-sideline-on-the-next-command)
   - [📂 Example projects](#📂-example-projects)
   - [🛠️ Contribute](#🛠️-contribute)
     - [🔬 Development](#🔬-development)
