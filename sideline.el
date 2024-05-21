@@ -263,12 +263,15 @@
          (require 'shr)
          (shr-string-pixel-width str))))
 
+(defun sideline--to-text-width (w)
+  "Convert pixel W to row/column width."
+  (let ((width (window-font-width)))
+    (+ (/ w width)
+       (if (zerop (% w width)) 0 1))))  ; add one if exceeed
+
 (defun sideline--str-len (str)
   "Calculate STR in pixel width."
-  (let ((width (window-font-width))
-        (len (sideline--string-pixel-width str)))
-    (+ (/ len width)
-       (if (zerop (% len width)) 0 1))))  ; add one if exceeed
+  (sideline--to-text-width (sideline--string-pixel-width str)))
 
 (defun sideline--kill-timer (timer)
   "Kill TIMER."
@@ -337,9 +340,28 @@ Argument OFFSET is additional calculation from the right alignment."
                   (if (= 0 (nth 1 fringes)) 1 0)
                 1)))))))
 
-(defun sideline--get-line ()
-  "Return current line."
-  (sideline--s-replace "\n" "" (thing-at-point 'line t)))
+(defun sideline--line-pixel-start ()
+  "Return the pixel start of the line."
+  (let ((left (save-excursion
+                (goto-char (line-beginning-position))
+                (car (window-absolute-pixel-position))))
+        (left-edge (window-pixel-left)))
+    (- left left-edge)))
+
+(defun sideline--line-pixel-end ()
+  "Return the pixel end of the line."
+  (let ((left (save-excursion
+                (goto-char (line-end-position))
+                (car (window-absolute-pixel-position))))
+        (left-edge (window-pixel-left)))
+    (- left left-edge)))
+
+(defun sideline--line-width ()
+  "Return the width of the line."
+  (let* ((start (sideline--line-pixel-start))  ; in pixel
+         (end (sideline--line-pixel-end))      ; in pixel
+         (len (- end start)))
+    (sideline--to-text-width len)))            ; to text space
 
 (defun sideline--calc-space (str-len on-left opposing-str-len)
   "Calculate space in current line.
@@ -355,21 +377,19 @@ calculate to the right side."
   ;; This is smart since we add up the string size before the calculation!
   (setq str-len (+ str-len opposing-str-len))
   ;; Start the calculation!
-  (let ((line (sideline--get-line))
-        (column-start (sideline--window-hscroll))
-        (win-width (sideline--window-width)))
+  (let* ((column-start (sideline--window-hscroll))
+         (win-width (sideline--window-width))
+         (pos-end (max (sideline--line-width) column-start)))
     (cond
      ((> str-len win-width) nil)
      (on-left
-      (let* ((pos-first (save-excursion (back-to-indentation) (current-column)))
-             (pos-end (max (sideline--str-len line) column-start)))
+      (let ((pos-first (save-excursion (back-to-indentation) (current-column))))
         (cond ((<= str-len (- pos-first column-start))
                (cons column-start pos-first))
               ((= pos-first pos-end)
                (cons column-start win-width)))))
      (t
-      (let* ((column-end (+ column-start win-width))
-             (pos-end (max (sideline--str-len line) column-start)))
+      (let ((column-end (+ column-start win-width)))
         (when (<= str-len (- column-end pos-end))
           (cons column-end pos-end)))))))
 
