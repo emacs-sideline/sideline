@@ -157,6 +157,12 @@
   :type 'function
   :group 'sideline)
 
+(defvar sideline--render-data nil
+  "Data used to render; only used everytime before rendering.")
+
+(defvar sideline--render-data-wapp (make-hash-table)
+  "Record pixel position; only used everytime before rendering.")
+
 (defvar-local sideline--overlays (make-hash-table)
   "Displayed overlays.")
 
@@ -196,7 +202,8 @@
   (progn
     (sideline--delete-ovs)
     (setq-local sideline--overlays (make-hash-table)))
-  (setq sideline--ex-bound-or-point t  ; render immediately
+  (setq sideline--render-data-wapp (make-hash-table)
+        sideline--ex-bound-or-point t  ; render immediately
         sideline--text-scale-mode-amount text-scale-mode-amount)
   (add-hook 'post-command-hook #'sideline--post-command -90 t))
 
@@ -342,18 +349,26 @@ Argument OFFSET is additional calculation from the right alignment."
 
 (defun sideline--line-pixel-start ()
   "Return the pixel start of the line."
-  (let ((left (save-excursion
-                (goto-char (line-beginning-position))
-                (car (window-absolute-pixel-position))))
-        (left-edge (window-pixel-left)))
+  (let* ((bol (line-beginning-position))
+         (left (car (save-excursion
+                      (goto-char bol)
+                      (or (ht-get sideline--render-data-wapp bol)
+                          (let ((wapp (window-absolute-pixel-position)))
+                            (ht-set sideline--render-data-wapp bol wapp)
+                            wapp)))))
+         (left-edge (window-pixel-left)))
     (- left left-edge)))
 
 (defun sideline--line-pixel-end ()
   "Return the pixel end of the line."
-  (let ((left (save-excursion
-                (goto-char (line-end-position))
-                (car (window-absolute-pixel-position))))
-        (left-edge (window-pixel-left)))
+  (let* ((eol (line-end-position))
+         (left (car (save-excursion
+                      (goto-char eol)
+                      (or (ht-get sideline--render-data-wapp eol)
+                          (let ((wapp (window-absolute-pixel-position)))
+                            (ht-set sideline--render-data-wapp eol wapp)
+                            wapp)))))
+         (left-edge (window-pixel-left)))
     (- left left-edge)))
 
 (defun sideline--line-width ()
@@ -393,14 +408,12 @@ calculate to the right side."
         (when (<= str-len (- column-end pos-end))
           (cons column-end pos-end)))))))
 
-(defun sideline--find-line (str-len on-left bol eol &optional direction exceeded)
+(defun sideline--find-line (str-len on-left &optional direction exceeded)
   "Find a line where the string can be inserted.
 
 Argument STR-LEN is the length of the message, use to calculate the alignment.
 
 If argument ON-LEFT is non-nil, it will align to the left instead of right.
-
-Arguments BOL and EOL are cache early for better performance.
 
 See variable `sideline-order' document string for optional argument DIRECTION
 for details.
@@ -417,7 +430,8 @@ available lines in both directions (up & down)."
       (while (not break-it)
         (if skip-first (setq skip-first nil)
           (forward-visible-line (if going-up -1 1)))
-        (unless (if going-up (<= bol (point)) (<= (point) eol))
+        (unless (if going-up (<= (sideline--render-data :bol) (point))
+                  (<= (point) (sideline--render-data :eol)))
           (setq break-it t))
         (when-let* ((occ-bol (line-beginning-position))
                     ((and (not (memq occ-bol occupied-lines))
@@ -434,7 +448,7 @@ available lines in both directions (up & down)."
       (setq sideline--occupied-lines-right occupied-lines))
     (or data
         (and (not exceeded)
-             (sideline--find-line str-len on-left bol eol (if going-up 'down 'up) t)))))
+             (sideline--find-line str-len on-left (if going-up 'down 'up) t)))))
 
 (defun sideline--create-keymap (action candidate)
   "Create keymap for sideline ACTION.
@@ -482,7 +496,8 @@ Argument CANDIDATE is the data for users."
   (ht-map (lambda (_key value)
             (mapc #'delete-overlay value))
           sideline--overlays)
-  (ht-clear sideline--overlays))
+  (ht-clear sideline--overlays)
+  (ht-clear sideline--render-data-wapp))
 
 (defun sideline--display-string (on-left backend-str candidate &optional type)
   "Return the display string to render the text correctly.
@@ -513,15 +528,13 @@ Optional argument TYPE is used for recursive `outer' and `inner'."
     (`inner (sideline--display-starting on-left backend-str (if on-left 'right 'left)))
     (`outer (sideline--display-starting on-left backend-str (if on-left 'left 'right)))))
 
-(defun sideline--create-ov (backend candidate action face name on-left order bol eol)
+(defun sideline--create-ov (backend candidate action face name on-left order)
   "Create information (CANDIDATE) overlay.
 
 Argument BACKEND is used to categorize overlays.
 
 See function `sideline--render-candidates' document string for arguments ACTION,
-FACE, NAME, ON-LEFT, and ORDER for details.
-
-Arguments BOL and EOL are cached for faster performance."
+FACE, NAME, ON-LEFT, and ORDER for details."
   (when-let*
       ((backend-str (format sideline-display-backend-format name))
        (text (if sideline-display-backend-name  ; this is the displayed text
@@ -544,7 +557,7 @@ Arguments BOL and EOL are cached for faster performance."
           (if on-left (format sideline-format-left text)
             (format sideline-format-right text))))
        (len-title (sideline--str-len title))
-       (data (sideline--find-line len-title on-left bol eol order))
+       (data (sideline--find-line len-title on-left order))
        (pos-start (nth 0 data)) (pos-end (nth 1 data)) (occ-pt (nth 2 data))
        (offset (- 0 (sideline--window-hscroll)))
        (str (concat
@@ -602,10 +615,9 @@ Argument ORDER determined the search order for going up or down."
         (action (sideline--call-backend backend 'action))
         (face (or (sideline--call-backend backend 'face) 'sideline-default))
         (name (or (sideline--call-backend backend 'name)
-                  (sideline--guess-backend-name backend)))
-        (bol (window-start)) (eol (sideline--window-end)))
+                  (sideline--guess-backend-name backend))))
     (dolist (candidate candidates)
-      (sideline--create-ov backend candidate action face name on-left order bol eol))))
+      (sideline--create-ov backend candidate action face name on-left order))))
 
 ;;
 ;; (@* "Core" )
@@ -641,10 +653,17 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
       (bound-and-true-p company-pseudo-tooltip-overlay)
       (bound-and-true-p lsp-ui-peek--overlay)))
 
+(defun sideline--render-data (prop)
+  "Get render data by PROP."
+  (plist-get sideline--render-data prop))
+
 (defun sideline-render (&optional buffer)
   "Render sideline once in the BUFFER."
   (sideline--with-buffer (or buffer (current-buffer))
     (unless (funcall sideline-inhibit-display-function)
+      (setq sideline--render-data
+            `( :eol ,(sideline--window-end)
+               :bol ,(window-start)))
       (run-hooks 'sideline-pre-render-hook)
       (sideline--render-backends sideline-backends-left t)
       (sideline--render-backends sideline-backends-right nil)
