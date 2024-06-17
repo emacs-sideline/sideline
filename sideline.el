@@ -661,6 +661,7 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
   "Render sideline once in the BUFFER."
   (sideline--with-buffer (or buffer (current-buffer))
     (unless (funcall sideline-inhibit-display-function)
+      (force-window-update (selected-window))
       (setq sideline--render-data
             `( :eol ,(sideline--window-end)
                :bol ,(window-start)
