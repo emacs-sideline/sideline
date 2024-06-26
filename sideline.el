@@ -716,7 +716,7 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
             sideline-render-this-command nil)
       t)))
 
-(defun sideline--before-revert ()
+(defun sideline--before-revert (&rest _)
   "Before revert."
   (sideline--reset))
 
