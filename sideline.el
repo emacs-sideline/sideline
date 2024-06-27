@@ -157,10 +157,10 @@
   :type 'function
   :group 'sideline)
 
-(defvar sideline--render-data nil
+(defvar-local sideline--render-data nil
   "Data used to render; only used everytime before rendering.")
 
-(defvar sideline--render-data-wapp (make-hash-table)
+(defvar-local sideline--render-data-wapp (make-hash-table)
   "Record pixel position; only used everytime before rendering.")
 
 (defvar-local sideline--overlays (make-hash-table)
@@ -246,11 +246,13 @@
   (declare (pure t) (side-effect-free t))
   (replace-regexp-in-string (regexp-quote old) new s t t))
 
-(defmacro sideline--with-buffer (buffer-or-name &rest body)
+(defmacro sideline--with-buffer-window (buffer-or-name &rest body)
   "Execute the forms in BODY with BUFFER-OR-NAME temporarily current."
   (declare (indent 1) (debug t))
-  `(when (buffer-live-p ,buffer-or-name)
-     (with-current-buffer ,buffer-or-name ,@body)))
+  `(when-let (((buffer-live-p ,buffer-or-name))
+              (window (get-buffer-window ,buffer-or-name)))
+     (with-selected-window window
+       (with-current-buffer ,buffer-or-name ,@body))))
 
 (defun sideline--window-hscroll ()
   "Like function `window-hscroll' but take more stuff into account."
@@ -646,7 +648,7 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
       (if (eq (car candidates) :async)
           (funcall (cdr candidates)
                    (lambda (cands &rest _)
-                     (sideline--with-buffer buffer
+                     (sideline--with-buffer-window buffer
                        (when sideline-mode
                          (sideline--render-candidates cands backend on-left order)))))
         (sideline--render-candidates candidates backend on-left order)))))
@@ -662,10 +664,9 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
   (plist-get sideline--render-data prop))
 
 (defun sideline-render (&optional buffer)
-  "Render sideline once in the BUFFER."
-  (sideline--with-buffer (or buffer (current-buffer))
+  "Render sideline once in the BUFFER of WINDOW."
+  (sideline--with-buffer-window (or buffer (current-buffer))
     (unless (funcall sideline-inhibit-display-function)
-      (force-window-update (selected-window))
       (setq sideline--render-data
             `( :eol ,(sideline--window-end)
                :bol ,(window-start)
@@ -726,7 +727,8 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
     (sideline--delete-ovs)
     (sideline--kill-timer sideline--delay-timer)
     (setq sideline--delay-timer
-          (run-with-idle-timer sideline-delay nil #'sideline-render (current-buffer)))
+          (run-with-idle-timer sideline-delay nil #'sideline-render
+                               (current-buffer)))
     (run-hooks 'sideline-reset-hook)))
 
 ;;;###autoload
