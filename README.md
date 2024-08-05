@@ -3,6 +3,8 @@
 [![MELPA](https://melpa.org/packages/sideline-badge.svg)](https://melpa.org/#/sideline)
 [![MELPA Stable](https://stable.melpa.org/packages/sideline-badge.svg)](https://stable.melpa.org/#/sideline)
 
+<a href="#"><img align="right" src="./etc/logo.png"></a>
+
 # sideline
 > Show informations on the side
 
