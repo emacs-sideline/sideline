@@ -4,7 +4,6 @@
 [![MELPA Stable](https://stable.melpa.org/packages/sideline-badge.svg)](https://stable.melpa.org/#/sideline)
 
 <a href="#"><img align="right" src="./etc/logo.png" width="20%"></a>
-
 # sideline
 > Show informations on the side
 
