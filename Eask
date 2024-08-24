@@ -1,5 +1,5 @@
 (package "sideline"
-         "0.1.1"
+         "0.2.0"
          "Show information on the side")
 
 (website-url "https://github.com/emacs-sideline/sideline")
