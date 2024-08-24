@@ -25,7 +25,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 * Better construct backend name (b63cea69948d386f007004ba6a272fc0e944ffb9)
 * feat: Categorize overlays by backend name (0d63da5246c49e3059680ebb02f64a2c3bb914e8)
 * fix: Compatible with buffer face font (a4626181434534385fbb199fa17d606f89e86e7c)
-* feat: Add option `sideline-force-display-if-exceeds` ()
+* feat: Add option `sideline-force-display-if-exceeds` (d30047d19e83b12e5d7de4f8d7bffae0662f79ce)
 
 ## 0.1.1
 > Released Jun 15, 2022
