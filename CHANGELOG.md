@@ -5,8 +5,13 @@ All notable changes to this project will be documented in this file.
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
 
-## 0.1.2 (Unreleased)
+## 0.3.0 (Unreleased)
 > Released N/A
+
+* N/A
+
+## 0.2.0
+> Released Aug 24, 2024
 
 * Add variable for inhibit display function (ce5a1620d0448e0a0959a83f27721246ab78fa0e)
 * Add variable to delay sideline renderer (638fb873d6071eadac798b92dd212889df45f7e3)
@@ -20,6 +25,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 * Better construct backend name (b63cea69948d386f007004ba6a272fc0e944ffb9)
 * feat: Categorize overlays by backend name (0d63da5246c49e3059680ebb02f64a2c3bb914e8)
 * fix: Compatible with buffer face font (a4626181434534385fbb199fa17d606f89e86e7c)
+* feat: Add option `sideline-force-display-if-exceeds` ()
 
 ## 0.1.1
 > Released Jun 15, 2022
