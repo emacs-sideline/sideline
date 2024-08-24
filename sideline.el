@@ -5,7 +5,7 @@
 
 ;; Author: Shen, Jen-Chieh <jcs090218@gmail.com>
 ;; URL: https://github.com/emacs-sideline/sideline
-;; Version: 0.1.1
+;; Version: 0.2.0
 ;; Package-Requires: ((emacs "27.1") (ht "2.4"))
 ;; Keywords: convenience
 
@@ -75,6 +75,11 @@
   "Display order on the right sidelines."
   :type '(choice (const :tag "Search up" up)
                  (const :tag "Search down" down))
+  :group 'sideline)
+
+(defcustom sideline-force-display-if-exceeds nil
+  "Display sideline even if the line width are wider than the window width."
+  :type 'boolean
   :group 'sideline)
 
 (defface sideline-default
@@ -399,7 +404,8 @@ calculate to the right side."
   (setq str-len (+ str-len opposing-str-len))
   ;; Start the calculation!
   (when-let* ((win-width (sideline--render-data :win-width))
-              ((<= str-len win-width))
+              ((or sideline-force-display-if-exceeds
+                   (<= str-len win-width)))
               (column-start (sideline--render-data :hscroll))
               (pos-end (max (sideline--line-width) column-start)))
     (cond
@@ -411,8 +417,9 @@ calculate to the right side."
                (cons column-start win-width)))))
      (t
       (let ((column-end (+ column-start win-width)))
-        (when (<= str-len (- column-end pos-end))
-          (cons column-end pos-end)))))))
+        (cond ((or sideline-force-display-if-exceeds
+                   (<= str-len (- column-end pos-end)))
+               (cons column-end pos-end))))))))
 
 (defun sideline--find-line (str-len on-left &optional direction exceeded)
   "Find a line where the string can be inserted.
