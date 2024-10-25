@@ -83,10 +83,13 @@
   :group 'sideline)
 
 (defcustom sideline-truncate t
-  "Truncate sideline if the line width are wider than the window width.
-
-Selected lines need to have at least 50% available space."
+  "Truncate sideline if the line width are wider than the window width."
   :type 'boolean
+  :group 'sideline)
+
+(defcustom sideline-truncate-min-available-space-ratio 0.5
+  "Minimum available space to allow truncation."
+  :type 'number
   :group 'sideline)
 
 (defface sideline-default
@@ -428,7 +431,8 @@ calculate to the right side."
         (cond ((or sideline-force-display-if-exceeds
                    (<= str-len (- column-end pos-end))
                    (and sideline-truncate
-                        (< (/ win-width 2) (- column-end pos-end))))
+                        (< (* win-width sideline-truncate-min-available-space-ratio)
+                           (- column-end pos-end))))
                (cons column-end pos-end))))))))
 
 (defun sideline--find-line (str-len on-left &optional direction exceeded)
@@ -595,8 +599,9 @@ FACE, NAME, ON-LEFT, and ORDER for details."
              title)))
 
     (when sideline-truncate
-      (let* ((win-width (sideline--render-data :win-width)))
-        (setq str (truncate-string-to-width str (- win-width (- pos-start occ-pt))))))
+      (let* ((win-width (sideline--render-data :win-width))
+             (used-space (- pos-start occ-pt)))
+        (setq str (truncate-string-to-width str (- win-width used-space)))))
     ;; Create overlay
     (let* ((len-str (length str))
            (empty-ln (= pos-start pos-end))
