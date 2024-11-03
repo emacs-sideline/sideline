@@ -92,6 +92,11 @@
   :type 'number
   :group 'sideline)
 
+(defcustom sideline-truncate-suffix "..."
+  "Truncation suffix."
+  :type 'string
+  :group 'sideline)
+
 (defface sideline-default
   '((((background light)) :foreground "DarkOrange")
     (t :foreground "yellow"))
@@ -600,8 +605,17 @@ FACE, NAME, ON-LEFT, and ORDER for details."
 
     (when sideline-truncate
       (let* ((win-width (sideline--render-data :win-width))
-             (used-space (- pos-start occ-pt)))
-        (setq str (truncate-string-to-width str (- win-width used-space)))))
+            (used-space (- pos-start occ-pt))
+            (available-space (1+ (- win-width used-space)))
+            (suffix nil))
+        (when (and sideline-truncate-suffix
+                   (> available-space (length sideline-truncate-suffix)))
+          (setq suffix (copy-sequence sideline-truncate-suffix))
+          (set-text-properties 0 (length suffix)
+                               (text-properties-at (1- (length str)) str)
+                               suffix))
+        (setq str (truncate-string-to-width str available-space 0 nil suffix))))
+
     ;; Create overlay
     (let* ((len-str (length str))
            (empty-ln (= pos-start pos-end))
