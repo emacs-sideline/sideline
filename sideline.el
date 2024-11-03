@@ -82,6 +82,21 @@
   :type 'boolean
   :group 'sideline)
 
+(defcustom sideline-truncate nil
+  "Truncate sideline if the line width are wider than the window width."
+  :type 'boolean
+  :group 'sideline)
+
+(defcustom sideline-truncate-min-available-space-ratio 0.5
+  "Minimum available space to allow truncation."
+  :type 'number
+  :group 'sideline)
+
+(defcustom sideline-truncate-suffix "..."
+  "Truncation suffix."
+  :type 'string
+  :group 'sideline)
+
 (defface sideline-default
   '((((background light)) :foreground "DarkOrange")
     (t :foreground "yellow"))
@@ -405,7 +420,7 @@ calculate to the right side."
   (setq str-len (+ str-len opposing-str-len))
   ;; Start the calculation!
   (when-let* ((win-width (sideline--render-data :win-width))
-              ((or sideline-force-display-if-exceeds
+              ((or sideline-force-display-if-exceeds sideline-truncate
                    (<= str-len win-width)))
               (column-start (sideline--render-data :hscroll))
               (pos-end (max (sideline--line-width) column-start)))
@@ -419,7 +434,10 @@ calculate to the right side."
      (t
       (let ((column-end (+ column-start win-width)))
         (cond ((or sideline-force-display-if-exceeds
-                   (<= str-len (- column-end pos-end)))
+                   (<= str-len (- column-end pos-end))
+                   (and sideline-truncate
+                        (< (* win-width sideline-truncate-min-available-space-ratio)
+                           (- column-end pos-end))))
                (cons column-end pos-end))))))))
 
 (defun sideline--find-line (str-len on-left &optional direction exceeded)
@@ -584,6 +602,20 @@ FACE, NAME, ON-LEFT, and ORDER for details."
                                       (space :width 0))
                            `cursor t))
              title)))
+
+    (when sideline-truncate
+      (let* ((win-width (sideline--render-data :win-width))
+            (used-space (- pos-start occ-pt))
+            (available-space (1+ (- win-width used-space)))
+            (suffix nil))
+        (when (and sideline-truncate-suffix
+                   (> available-space (length sideline-truncate-suffix)))
+          (setq suffix (copy-sequence sideline-truncate-suffix))
+          (set-text-properties 0 (length suffix)
+                               (text-properties-at (1- (length str)) str)
+                               suffix))
+        (setq str (truncate-string-to-width str available-space 0 nil suffix))))
+
     ;; Create overlay
     (let* ((len-str (length str))
            (empty-ln (= pos-start pos-end))
