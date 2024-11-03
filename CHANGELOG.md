@@ -8,7 +8,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ## 0.3.0 (Unreleased)
 > Released N/A
 
-* N/A
+* feat: Truncate long lines (#25)
 
 ## 0.2.0
 > Released Aug 24, 2024
