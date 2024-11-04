@@ -604,13 +604,14 @@ FACE, NAME, ON-LEFT, and ORDER for details."
                            `cursor t))
              title)))
 
+    ;; Truncate
     (when sideline-truncate
       (let* ((win-width (sideline--render-data :win-width))
              (used-space (- pos-start occ-pt))
              (available-space (1+ (- win-width used-space)))
              (suffix nil))
         (when (and sideline-truncate-suffix
-                   (> available-space (sideline--str-len sideline-truncate-suffix)))
+                   (> available-space (sideline--render-data :suffix-width)))
           (setq suffix (copy-sequence sideline-truncate-suffix))
           (set-text-properties 0 (length suffix)
                                (text-properties-at (1- (length str)) str)
@@ -711,10 +712,12 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
   (sideline--with-buffer-window (or buffer (current-buffer))
     (unless (funcall sideline-inhibit-display-function)
       (setq sideline--render-data
-            `( :eol ,(sideline--window-end)
-               :bol ,(window-start)
-               :hscroll ,(sideline--window-hscroll)
-               :win-width ,(sideline--window-width)))
+            `( :eol          ,(sideline--window-end)
+               :bol          ,(window-start)
+               :hscroll      ,(sideline--window-hscroll)
+               :win-width    ,(sideline--window-width)
+               :suffix-width ,(and sideline-truncate-suffix
+                                   (sideline--str-len sideline-truncate-suffix))))
       (run-hooks 'sideline-pre-render-hook)
       (sideline--render-backends sideline-backends-left t)
       (sideline--render-backends sideline-backends-right nil)
