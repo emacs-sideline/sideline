@@ -432,12 +432,13 @@ calculate to the right side."
               ((= pos-first pos-end)
                (cons column-start win-width)))))
      (t
-      (let ((column-end (+ column-start win-width)))
+      (let* ((column-end (+ column-start win-width))
+             (remain-spaces (- column-end pos-end)))
         (cond ((or sideline-force-display-if-exceeds
-                   (<= str-len (- column-end pos-end))
+                   (<= str-len remain-spaces)
                    (and sideline-truncate
                         (< (* win-width sideline-truncate-min-available-space-ratio)
-                           (- column-end pos-end))))
+                           remain-spaces)))
                (cons column-end pos-end))))))))
 
 (defun sideline--find-line (str-len on-left &optional direction exceeded)
@@ -605,11 +606,11 @@ FACE, NAME, ON-LEFT, and ORDER for details."
 
     (when sideline-truncate
       (let* ((win-width (sideline--render-data :win-width))
-            (used-space (- pos-start occ-pt))
-            (available-space (1+ (- win-width used-space)))
-            (suffix nil))
+             (used-space (- pos-start occ-pt))
+             (available-space (1+ (- win-width used-space)))
+             (suffix nil))
         (when (and sideline-truncate-suffix
-                   (> available-space (length sideline-truncate-suffix)))
+                   (> available-space (sideline--str-len sideline-truncate-suffix)))
           (setq suffix (copy-sequence sideline-truncate-suffix))
           (set-text-properties 0 (length suffix)
                                (text-properties-at (1- (length str)) str)
