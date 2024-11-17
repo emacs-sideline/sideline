@@ -595,6 +595,20 @@ FACE, NAME, ON-LEFT, and ORDER for details."
        (data (sideline--find-line len-title on-left order))
        (pos-start (nth 0 data)) (pos-end (nth 1 data)) (occ-pt (nth 2 data))
        (offset (- 0 (sideline--render-data :hscroll)))
+       ;; Truncate
+       (title (and sideline-truncate
+                   (let* ((win-width (sideline--render-data :win-width))
+                          (used-space (- pos-start occ-pt))
+                          (available-space (- win-width used-space))
+                          (suffix nil))
+                     (when (and sideline-truncate-suffix
+                                (> available-space (sideline--render-data :suffix-width)))
+                       (setq suffix (copy-sequence sideline-truncate-suffix))
+                       (set-text-properties 0 (length suffix)
+                                            (text-properties-at (1- (length title)) title)
+                                            suffix))
+                     (truncate-string-to-width title available-space 0 nil suffix))))
+       ;; Align left/right
        (str (concat
              (unless on-left
                (propertize " "
@@ -603,20 +617,6 @@ FACE, NAME, ON-LEFT, and ORDER for details."
                                       (space :width 0))
                            `cursor t))
              title)))
-
-    ;; Truncate
-    (when sideline-truncate
-      (let* ((win-width (sideline--render-data :win-width))
-             (used-space (- pos-start occ-pt))
-             (available-space (1+ (- win-width used-space)))
-             (suffix nil))
-        (when (and sideline-truncate-suffix
-                   (> available-space (sideline--render-data :suffix-width)))
-          (setq suffix (copy-sequence sideline-truncate-suffix))
-          (set-text-properties 0 (length suffix)
-                               (text-properties-at (1- (length str)) str)
-                               suffix))
-        (setq str (truncate-string-to-width str available-space 0 nil suffix))))
 
     ;; Create overlay
     (let* ((len-str (length str))
