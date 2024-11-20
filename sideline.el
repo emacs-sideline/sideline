@@ -44,6 +44,7 @@
 
 (require 'cl-lib)
 (require 'face-remap)
+(require 'mule-util)
 (require 'rect)
 (require 'subr-x)
 
