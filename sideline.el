@@ -92,11 +92,6 @@
   :type 'number
   :group 'sideline)
 
-(defcustom sideline-truncate-suffix "..."
-  "Truncation suffix."
-  :type 'string
-  :group 'sideline)
-
 (defface sideline-default
   '((((background light)) :foreground "DarkOrange")
     (t :foreground "yellow"))
@@ -202,6 +197,21 @@
   "If this is non-nil, re-render this command.")
 
 ;;
+;; (@* "Obsolete" )
+;;
+
+(defcustom sideline-truncate-suffix "..."
+  "Truncation suffix."
+  :type 'string
+  :group 'sideline)
+
+(define-obsolete-variable-alias
+  'sideline-truncate-suffix
+  'truncate-string-ellipsis
+  "sideline 0.3.0"
+  "Use built-in variable instead.")
+
+;;
 ;; (@* "Externals" )
 ;;
 
@@ -270,8 +280,8 @@
 (defmacro sideline--with-buffer-window (buffer-or-name &rest body)
   "Execute the forms in BODY with BUFFER-OR-NAME temporarily current."
   (declare (indent 1) (debug t))
-  `(when-let (((buffer-live-p ,buffer-or-name))
-              (window (get-buffer-window ,buffer-or-name)))
+  `(when-let* (((buffer-live-p ,buffer-or-name))
+               (window (get-buffer-window ,buffer-or-name)))
      (with-selected-window window
        (with-current-buffer ,buffer-or-name ,@body))))
 
@@ -600,14 +610,12 @@ FACE, NAME, ON-LEFT, and ORDER for details."
                    (let* ((win-width (sideline--render-data :win-width))
                           (used-space (- pos-start occ-pt))
                           (available-space (- win-width used-space))
-                          (suffix nil))
-                     (when (and sideline-truncate-suffix
-                                (> available-space (sideline--render-data :suffix-width)))
-                       (setq suffix (copy-sequence sideline-truncate-suffix))
-                       (set-text-properties 0 (length suffix)
-                                            (text-properties-at (1- (length title)) title)
-                                            suffix))
-                     (truncate-string-to-width title available-space 0 nil suffix))))
+                          (suffix (copy-sequence (truncate-string-ellipsis))))
+                     (set-text-properties 0 (length suffix)
+                                          (text-properties-at (1- (length title)) title)
+                                          suffix)
+                     (truncate-string-to-width title available-space 0 nil
+                                               suffix))))
        ;; Align left/right
        (str (concat
              (unless on-left
