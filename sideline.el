@@ -44,6 +44,7 @@
 
 (require 'cl-lib)
 (require 'face-remap)
+(require 'mule-util)
 (require 'rect)
 (require 'subr-x)
 
@@ -57,12 +58,12 @@
 
 (defcustom sideline-backends-left nil
   "The list of active backends to display sideline on the left."
-  :type 'list
+  :type '(list symbol)
   :group 'sideline)
 
 (defcustom sideline-backends-right nil
   "The list of active backends to display sideline on the right."
-  :type 'list
+  :type '(list symbol)
   :group 'sideline)
 
 (defcustom sideline-order-left 'down
