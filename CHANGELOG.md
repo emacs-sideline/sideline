@@ -9,6 +9,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 > Released N/A
 
 * feat: Truncate long lines (#25)
+* feat: Use built-in truncation symbols (#27)
 
 ## 0.2.0
 > Released Aug 24, 2024
