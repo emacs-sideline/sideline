@@ -198,21 +198,6 @@
   "If this is non-nil, re-render this command.")
 
 ;;
-;; (@* "Obsolete" )
-;;
-
-(defcustom sideline-truncate-suffix "..."
-  "Truncation suffix."
-  :type 'string
-  :group 'sideline)
-
-(define-obsolete-variable-alias
-  'sideline-truncate-suffix
-  'truncate-string-ellipsis
-  "sideline 0.3.0"
-  "Use built-in variable instead.")
-
-;;
 ;; (@* "Externals" )
 ;;
 
@@ -721,12 +706,10 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
   (sideline--with-buffer-window (or buffer (current-buffer))
     (unless (funcall sideline-inhibit-display-function)
       (setq sideline--render-data
-            `( :eol          ,(sideline--window-end)
-               :bol          ,(window-start)
-               :hscroll      ,(sideline--window-hscroll)
-               :win-width    ,(sideline--window-width)
-               :suffix-width ,(and sideline-truncate-suffix
-                                   (sideline--str-len sideline-truncate-suffix))))
+            `( :eol       ,(sideline--window-end)
+               :bol       ,(window-start)
+               :hscroll   ,(sideline--window-hscroll)
+               :win-width ,(sideline--window-width)))
       (run-hooks 'sideline-pre-render-hook)
       (sideline--render-backends sideline-backends-left t)
       (sideline--render-backends sideline-backends-right nil)
