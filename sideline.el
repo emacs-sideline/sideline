@@ -592,16 +592,17 @@ FACE, NAME, ON-LEFT, and ORDER for details."
        (pos-start (nth 0 data)) (pos-end (nth 1 data)) (occ-pt (nth 2 data))
        (offset (- 0 (sideline--render-data :hscroll)))
        ;; Truncate
-       (title (and sideline-truncate
-                   (let* ((win-width (sideline--render-data :win-width))
-                          (used-space (- pos-start occ-pt))
-                          (available-space (- win-width used-space))
-                          (suffix (copy-sequence (truncate-string-ellipsis))))
-                     (set-text-properties 0 (length suffix)
-                                          (text-properties-at (1- (length title)) title)
-                                          suffix)
-                     (truncate-string-to-width title available-space 0 nil
-                                               suffix))))
+       (title (if sideline-truncate
+                  (let* ((win-width (sideline--render-data :win-width))
+                         (used-space (- pos-start occ-pt))
+                         (available-space (- win-width used-space))
+                         (suffix (copy-sequence (truncate-string-ellipsis))))
+                    (set-text-properties 0 (length suffix)
+                                         (text-properties-at (1- (length title)) title)
+                                         suffix)
+                    (truncate-string-to-width title available-space 0 nil
+                                              suffix))
+                title))
        ;; Align left/right
        (str (concat
              (unless on-left
