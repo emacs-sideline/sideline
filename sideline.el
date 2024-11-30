@@ -6,7 +6,7 @@
 ;; Author: Shen, Jen-Chieh <jcs090218@gmail.com>
 ;; URL: https://github.com/emacs-sideline/sideline
 ;; Version: 0.2.0
-;; Package-Requires: ((emacs "27.1") (ht "2.4"))
+;; Package-Requires: ((emacs "28.1") (ht "2.4"))
 ;; Keywords: convenience
 
 ;; This file is NOT part of GNU Emacs.
@@ -86,11 +86,6 @@
 (defcustom sideline-truncate nil
   "Truncate sideline if the line width are wider than the window width."
   :type 'boolean
-  :group 'sideline)
-
-(defcustom sideline-truncate-min-available-space-ratio 0.5
-  "Minimum available space to allow truncation."
-  :type 'number
   :group 'sideline)
 
 (defface sideline-default
@@ -196,6 +191,12 @@
 
 (defvar-local sideline-render-this-command nil
   "If this is non-nil, re-render this command.")
+
+(defvar-local sideline--max-remain-spaces nil
+  "Hold the maximum remaining spaces when finding lines..")
+
+(defvar-local sideline--max-remain-spaces-line nil
+  "Hold the line information that has the maximum remaining spaces.")
 
 ;;
 ;; (@* "Externals" )
@@ -401,7 +402,12 @@ Argument OFFSET is additional calculation from the right alignment."
          (len (- end start)))
     (sideline--to-text-width len)))            ; to text space
 
-(defun sideline--calc-space (str-len on-left opposing-str-len)
+(defun sideline--exceed-display-p ()
+  "Return non-nil if exceed display."
+  (or sideline-force-display-if-exceeds
+      sideline-truncate))
+
+(defun sideline--calc-space (str-len on-left opposing-str-len bol)
   "Calculate space in current line.
 
 Argument STR-LEN is the string size.  Another argument OPPOSING-STR-LEN is the
@@ -416,26 +422,36 @@ calculate to the right side."
   (setq str-len (+ str-len opposing-str-len))
   ;; Start the calculation!
   (when-let* ((win-width (sideline--render-data :win-width))
-              ((or sideline-force-display-if-exceeds sideline-truncate
-                   (<= str-len win-width)))
+              ((or (<= str-len win-width)
+                   (sideline--exceed-display-p)))
               (column-start (sideline--render-data :hscroll))
-              (pos-end (max (sideline--line-width) column-start)))
+              (pos-end (ignore-errors (sideline--line-width)))
+              (pos-end (max pos-end column-start)))
     (cond
      (on-left
-      (let ((pos-first (save-excursion (back-to-indentation) (current-column))))
-        (cond ((<= str-len (- pos-first column-start))
+      (let* ((pos-first (save-excursion (back-to-indentation) (current-column)))
+             (remain-spaces (- pos-first column-start)))
+        (cond ((<= str-len remain-spaces)
                (cons column-start pos-first))
               ((= pos-first pos-end)
-               (cons column-start win-width)))))
+               (cons column-start win-width))
+              ((and (sideline--exceed-display-p)
+                    (< sideline--max-remain-spaces remain-spaces))
+               (setq sideline--max-remain-spaces remain-spaces
+                     sideline--max-remain-spaces-line (cons bol
+                                                            (cons column-start pos-first)))
+               nil))))  ; Ensure return `nil'.
      (t
       (let* ((column-end (+ column-start win-width))
              (remain-spaces (- column-end pos-end)))
-        (cond ((or sideline-force-display-if-exceeds
-                   (<= str-len remain-spaces)
-                   (and sideline-truncate
-                        (< (* win-width sideline-truncate-min-available-space-ratio)
-                           remain-spaces)))
-               (cons column-end pos-end))))))))
+        (cond ((<= str-len remain-spaces)
+               (cons column-end pos-end))
+              ((and (sideline--exceed-display-p)
+                    (< sideline--max-remain-spaces remain-spaces))
+               (setq sideline--max-remain-spaces remain-spaces
+                     sideline--max-remain-spaces-line (cons bol
+                                                            (cons column-end pos-end)))
+               nil)))))))
 
 (defun sideline--find-line (str-len on-left &optional direction exceeded)
   "Find a line where the string can be inserted.
@@ -459,21 +475,37 @@ available lines in both directions (up & down)."
       (while (not break-it)
         (if skip-first (setq skip-first nil)
           (forward-visible-line (if going-up -1 1)))
-        (unless (if going-up (<= (sideline--render-data :bol) (point))
-                  (<= (point) (sideline--render-data :eol)))
-          (setq break-it t))
-        (when-let* ((occ-bol (line-beginning-position))
-                    ((and (not (memq occ-bol occupied-lines))
-                          (not break-it)))
-                    (col (sideline--calc-space str-len on-left (sideline--opposing-str-len)))
-                    (pos-start (sideline--column-to-point (car col)))
-                    (pos-end   (sideline--column-to-point (cdr col)))
-                    ;; Skip virtual line from `truncate-lines'.
-                    ((= pos-start pos-end)))
+        ;; Reach window edge, means find nothing.
+        (unless break-it
+          (unless (if going-up
+                      (<= (sideline--render-data :win-start) (point))
+                    (<= (point) (sideline--render-data :win-end)))
+            (setq break-it t)))
+        ;; Reach buffer edge, means find nothing.
+        (unless break-it
+          (when (if going-up (bobp) (eobp))
+            (setq break-it t)))
+        (when-let*
+            ((occ-bol (line-beginning-position))
+             ((not (memq occ-bol occupied-lines)))
+             (col (or (sideline--calc-space str-len on-left
+                                            (sideline--opposing-str-len)
+                                            occ-bol)
+                      ;; Handle exceed display.
+                      (when (and break-it
+                                 sideline--max-remain-spaces-line)
+                        ;; Apply to BOL
+                        (setq occ-bol (car sideline--max-remain-spaces-line))
+                        (goto-char occ-bol)
+                        ;; Return column data.
+                        (cdr sideline--max-remain-spaces-line))))
+             (pos-start (sideline--column-to-point (car col)))
+             (pos-end   (sideline--column-to-point (cdr col)))
+             ;; Skip virtual line from `truncate-lines'.
+             ((= pos-start pos-end)))
           (setq data (list pos-start pos-end occ-bol))
           (setq break-it t)
-          (push occ-bol occupied-lines))
-        (when (if going-up (bobp) (eobp)) (setq break-it t))))
+          (push occ-bol occupied-lines))))
     (if on-left
         (setq sideline--occupied-lines-left occupied-lines)
       (setq sideline--occupied-lines-right occupied-lines))
@@ -588,7 +620,9 @@ FACE, NAME, ON-LEFT, and ORDER for details."
           (if on-left (format sideline-format-left text)
             (format sideline-format-right text))))
        (len-title (sideline--str-len title))
-       (data (sideline--find-line len-title on-left order))
+       (data (let ((sideline--max-remain-spaces -1)         ; Reset before use.
+                   (sideline--max-remain-spaces-line nil))  ; Reset before use.
+               (sideline--find-line len-title on-left order)))
        (pos-start (nth 0 data)) (pos-end (nth 1 data)) (occ-pt (nth 2 data))
        (offset (- 0 (sideline--render-data :hscroll)))
        ;; Truncate
@@ -707,8 +741,8 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
   (sideline--with-buffer-window (or buffer (current-buffer))
     (unless (funcall sideline-inhibit-display-function)
       (setq sideline--render-data
-            `( :eol       ,(sideline--window-end)
-               :bol       ,(window-start)
+            `( :win-end   ,(sideline--window-end)
+               :win-start ,(window-start)
                :hscroll   ,(sideline--window-hscroll)
                :win-width ,(sideline--window-width)))
       (run-hooks 'sideline-pre-render-hook)
