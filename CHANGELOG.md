@@ -10,6 +10,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 * feat: Truncate long lines (#25)
 * feat: Use built-in truncation symbols (#27)
+* feat: Find longest line before exceed display (63c913aeb5836f2376d1ad01580e67f9d1c56e0a)
 
 ## 0.2.0
 > Released Aug 24, 2024
