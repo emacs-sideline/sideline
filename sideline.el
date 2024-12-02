@@ -83,7 +83,7 @@
   :type 'boolean
   :group 'sideline)
 
-(defcustom sideline-truncate nil
+(defcustom sideline-truncate t
   "Truncate sideline if the line width are wider than the window width."
   :type 'boolean
   :group 'sideline)
