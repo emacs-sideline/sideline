@@ -23,6 +23,7 @@ left/right side of the buffer window.
     - [👥 Configure backends](#-configure-backends)
   - [📌 Define your own backend](#-define-your-own-backend)
   - [❓ FAQ](#-faq)
+    - [💫 Why is sideline not being render?](#-why-is-sideline-not-being-render)
     - [💫 How to force render the sideline on the next command?](#-how-to-force-render-the-sideline-on-the-next-command)
   - [📂 Example projects](#-example-projects)
   - [🛠️ Contribute](#-contribute)
