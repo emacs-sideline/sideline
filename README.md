@@ -130,12 +130,29 @@ then you can tell your user to...
 
 Here is a list of supported commands:
 
-* `candidates` - list of strings to display; accept async function
-* `action` - (optional) callback function after the mouse click
-* `face` - (optional) face overrides the default sideline face
-* `name` - (optional) backend name to display
+- `candidates` - list of strings to display; accept async function
+- `action` - (optional) callback function after the mouse click
+- `face` - (optional) face overrides the default sideline face
+- `name` - (optional) backend name to display
 
 ## ❓ FAQ
+
+### 💫 Why is sideline not being render?
+
+`sideline` omit the information by default when the message is too long to
+display on the screen. You can force display these long messages by doing:
+
+```elisp
+(setq sideline-force-display-if-exceeds t)  ; display it regardless the message length
+```
+
+or
+
+```elisp
+(setq sideline-truncate t)  ; force display but truncate it when too long
+```
+
+*📝 P.S. `sideline-truncate` is enabled by default after version `0.3.0`!*
 
 ### 💫 How to force render the sideline on the next command?
 
