@@ -199,6 +199,28 @@
   "Hold the line information that has the maximum remaining spaces.")
 
 ;;
+;; (@* "Render Flags" )
+;;
+
+(defvar-local sideline--ex-window nil
+  "Holds previous window.")
+
+(defvar-local sideline--ex-window-start nil
+  "Holds previous window start point; detect vertical scrolling.")
+
+(defvar-local sideline--ex-window-hscroll nil
+  "Holds previous window hscroll; detect horizontal scrolling.")
+
+(defvar-local sideline--ex-window-width nil
+  "Holds previous window width; detect size change.")
+
+(defvar-local sideline--ex-window-height nil
+  "Holds previous window height; detect size change.")
+
+(defvar-local sideline--ex-face-remapping-alist nil
+  "Holds previous face remapping alist.")
+
+;;
 ;; (@* "Externals" )
 ;;
 
@@ -723,6 +745,16 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
                    (lambda (cands &rest _)
                      (sideline--with-buffer-window buffer
                        (when sideline-mode
+                         ;; XXX: The bug occurs when you have two or more indentical
+                         ;; windows (same buffer and same cursor position) and
+                         ;; frequently change between different buffers.
+                         ;;
+                         ;; To solve this, just record the "real" rendering
+                         ;; buffer in async. So when you switch back to the same
+                         ;; buffer, the sideline can adjust to find the correct
+                         ;; buffer in the function `sideline--do-render-p' since
+                         ;; it has been flag here.
+                         (setq sideline--ex-window (selected-window))
                          (sideline--render-candidates cands backend on-left order)))))
         (sideline--render-candidates candidates backend on-left order)))))
 
@@ -736,63 +768,62 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
   "Get render data by PROP."
   (plist-get sideline--render-data prop))
 
+(defun sideline--render-data-update (&rest _)
+  "Update the render data once."
+  (setq sideline--render-data
+        `( :win-end   ,(sideline--window-end)
+           :win-start ,(window-start)
+           :hscroll   ,(sideline--window-hscroll)
+           :win-width ,(sideline--window-width))))
+
 (defun sideline-render (&optional buffer)
   "Render sideline once in the BUFFER of WINDOW."
   (sideline--with-buffer-window (or buffer (current-buffer))
     (unless (funcall sideline-inhibit-display-function)
-      (setq sideline--render-data
-            `( :win-end   ,(sideline--window-end)
-               :win-start ,(window-start)
-               :hscroll   ,(sideline--window-hscroll)
-               :win-width ,(sideline--window-width)))
+      (sideline--render-data-update)
       (run-hooks 'sideline-pre-render-hook)
       (sideline--render-backends sideline-backends-left t)
       (sideline--render-backends sideline-backends-right nil)
       (run-hooks 'sideline-post-render-hook))))
 
-(defvar-local sideline--delay-timer nil
-  "Timer for delay.")
-
-(defvar-local sideline--ex-window nil
-  "Holds previous window.")
-
-(defvar-local sideline--ex-window-start nil
-  "Holds previous window start point; this will detect vertical scrolling.")
-
-(defvar-local sideline--ex-window-hscroll nil
-  "Holds previous window hscroll; this will detect horizontal scrolling.")
-
-(defvar-local sideline--ex-face-remapping-alist nil
-  "Holds previous face remapping alist.")
-
 (defun sideline--do-render-p ()
   "Return non-nil if we should re-render sidelines in the post-command."
-  (let ((bound-or-point (or (bounds-of-thing-at-point 'symbol) (point)))
-        (window (selected-window))
-        (win-start (window-start))
-        (win-hscroll (window-hscroll))
+  (let ((bound-or-point  (or (bounds-of-thing-at-point 'symbol)
+                             (point)))
+        (window          (selected-window))
+        (win-start       (window-start))
+        (win-hscroll     (window-hscroll))
+        (win-width       (window-width))
+        (win-height      (window-height))
         (remapping-alist face-remapping-alist))
     (when  ; conditions allow to re-render sidelines
-        (or (not (equal sideline--ex-bound-or-point bound-or-point))
-            (not (equal sideline--text-scale-mode-amount text-scale-mode-amount))
-            (not (equal sideline--ex-window window))
-            (not (equal sideline--ex-window-start win-start))
-            (not (equal sideline--ex-window-hscroll win-hscroll))
+        (or (not (equal sideline--ex-bound-or-point       bound-or-point))
+            (not (equal sideline--text-scale-mode-amount  text-scale-mode-amount))
+            (not (equal sideline--ex-window               window))
+            (not (equal sideline--ex-window-start         win-start))
+            (not (equal sideline--ex-window-hscroll       win-hscroll))
+            (not (equal sideline--ex-window-width         win-width))
+            (not (equal sideline--ex-window-height        win-height))
             (not (equal sideline--ex-face-remapping-alist remapping-alist))
             sideline-render-this-command)
       ;; update
-      (setq sideline--ex-bound-or-point bound-or-point
-            sideline--text-scale-mode-amount text-scale-mode-amount
-            sideline--ex-window window
-            sideline--ex-window-start win-start
-            sideline--ex-window-hscroll win-hscroll
+      (setq sideline--ex-bound-or-point       bound-or-point
+            sideline--text-scale-mode-amount  text-scale-mode-amount
+            sideline--ex-window               window
+            sideline--ex-window-start         win-start
+            sideline--ex-window-hscroll       win-hscroll
+            sideline--ex-window-width         win-width
+            sideline--ex-window-height        win-height
             sideline--ex-face-remapping-alist remapping-alist
-            sideline-render-this-command nil)
+            sideline-render-this-command      nil)
       t)))
 
 (defun sideline--before-revert (&rest _)
   "Before revert."
   (sideline--reset))
+
+(defvar-local sideline--delay-timer nil
+  "Timer for delay.")
 
 (defun sideline--post-command ()
   "Post command."
@@ -802,6 +833,9 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
     (setq sideline--delay-timer
           (run-with-idle-timer sideline-delay nil #'sideline-render
                                (current-buffer)))
+    ;; XXX: Reset hook can potentially re-render sideline; update the render
+    ;; data once to ensure display's correctioness.
+    (sideline--render-data-update)
     (run-hooks 'sideline-reset-hook)))
 
 ;;;###autoload
