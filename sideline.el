@@ -733,30 +733,32 @@ Argument ORDER determined the search order for going up or down."
 
 If argument ON-LEFT is non-nil, it will align to the left instead of right."
   (dolist (data backends)
-    (let* ((is-cons (consp data))
-           (backend (if is-cons (car data) data))
-           (order (if is-cons (cdr data)  ; configured
-                    ;; fallback to default
-                    (if on-left sideline-order-left sideline-order-right)))
-           (candidates (sideline--call-backend backend 'candidates))
-           (buffer (current-buffer)))  ; for async check
-      (if (eq (car candidates) :async)
-          (funcall (cdr candidates)
-                   (lambda (cands &rest _)
-                     (sideline--with-buffer-window buffer
-                       (when sideline-mode
-                         ;; XXX: The bug occurs when you have two or more indentical
-                         ;; windows (same buffer and same cursor position) and
-                         ;; frequently change between different buffers.
-                         ;;
-                         ;; To solve this, just record the "real" rendering
-                         ;; buffer in async. So when you switch back to the same
-                         ;; buffer, the sideline can adjust to find the correct
-                         ;; buffer in the function `sideline--do-render-p' since
-                         ;; it has been flag here.
-                         (setq sideline--ex-window (selected-window))
-                         (sideline--render-candidates cands backend on-left order)))))
-        (sideline--render-candidates candidates backend on-left order)))))
+    (let ((is-cons (consp data)))
+      (when-let* ((backend (if is-cons (car data) data))
+                  (backend (if (symbolp backend) backend
+                             (eval backend)))
+                  (order (if is-cons (cdr data)  ; configured
+                           ;; fallback to default
+                           (if on-left sideline-order-left sideline-order-right)))
+                  (candidates (sideline--call-backend backend 'candidates))
+                  (buffer (current-buffer)))  ; for async check
+        (if (eq (car candidates) :async)
+            (funcall (cdr candidates)
+                     (lambda (cands &rest _)
+                       (sideline--with-buffer-window buffer
+                         (when sideline-mode
+                           ;; XXX: The bug occurs when you have two or more indentical
+                           ;; windows (same buffer and same cursor position) and
+                           ;; frequently change between different buffers.
+                           ;;
+                           ;; To solve this, just record the "real" rendering
+                           ;; buffer in async. So when you switch back to the same
+                           ;; buffer, the sideline can adjust to find the correct
+                           ;; buffer in the function `sideline--do-render-p' since
+                           ;; it has been flag here.
+                           (setq sideline--ex-window (selected-window))
+                           (sideline--render-candidates cands backend on-left order)))))
+          (sideline--render-candidates candidates backend on-left order))))))
 
 (defun sideline-stop-p ()
   "Return non-nil if the sideline should not be display."
