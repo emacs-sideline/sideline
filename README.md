@@ -34,9 +34,22 @@ left/right side of the buffer window.
 
 ## ❓ Why?
 
-Instead of hard-coded information, we extracted it to multiple different backends.
-It allows us to customize the displayed information we want, which is
-more flexible and configurable.
+Many packages offer similar features, but it's impossible to use multiple packages with
+similar functionality simultaneously because each implements its solution differently.
+This often results in display errors and conflicts between the packages' implementations.
+
+Sideline provides a universal interface that seamlessly combines these features by utilizing
+simple backend rules. Rather than relying on hard-coded information, it separates the data
+into multiple distinct backends. This approach offers greater flexibility and configurability,
+allowing users to customize the information they want to display.
+
+Here are some examples of packages with similar functionality:
+
+- [lsp-ui-sideline.el](https://github.com/emacs-lsp/lsp-ui/blob/master/lsp-ui-sideline.el) (`sideline.el` is inspired from this package)
+- [eglot](https://github.com/joaotavora/eglot)
+- [blamer](https://github.com/Artawower/blamer.el)
+- [eros](https://github.com/xiongtx/eros)
+- and others.
 
 ## 🔨 Quickstart
 
