@@ -51,6 +51,19 @@ Here are some examples of packages with similar functionality:
 - [eros](https://github.com/xiongtx/eros)
 - and others.
 
+Additionally, the above packages can be replaced by:
+
+```elisp
+(use-package sideline
+  :init
+  (setq sideline-backends-right '(sideline-lsp       ; `lsp-ui-sideline.el'
+                                  sideline-flycheck  ; `lsp-mode' uses `flycheck' by default
+                                  sideline-eglot     ; `eglot'
+                                  sideline-flymake   ; `eglot' uses `flymake' by default
+                                  sideline-blame     ; For `blamer'
+                                  sideline-eros)))   ; For `eros'
+```
+
 ## 🔨 Quickstart
 
 ```elisp
