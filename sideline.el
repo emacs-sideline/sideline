@@ -644,7 +644,7 @@ FACE, NAME, ON-LEFT, and ORDER for details."
           (if on-left (format sideline-format-left text)
             (format sideline-format-right text))))
        (len-title (sideline--str-len title))
-       (data (let ((sideline--max-remain-spaces -1)         ; Reset before use.
+       (data (let ((sideline--max-remain-spaces 0)          ; Reset before use.
                    (sideline--max-remain-spaces-line nil))  ; Reset before use.
                (sideline--find-line len-title on-left order)))
        (pos-start (nth 0 data)) (pos-end (nth 1 data)) (occ-pt (nth 2 data))
