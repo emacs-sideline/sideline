@@ -452,6 +452,7 @@ calculate to the right side."
     (cond
      (on-left
       (let* ((pos-first (save-excursion (back-to-indentation) (current-column)))
+             (pos-first (max pos-first column-start))
              (remain-spaces (- pos-first column-start)))
         (cond ((<= str-len remain-spaces)
                (cons column-start pos-first))
@@ -648,20 +649,20 @@ FACE, NAME, ON-LEFT, and ORDER for details."
                    (sideline--max-remain-spaces-line nil))  ; Reset before use.
                (sideline--find-line len-title on-left order)))
        (pos-start (nth 0 data)) (pos-end (nth 1 data)) (occ-pt (nth 2 data))
-       (offset (- 0 (sideline--render-data :hscroll)))
+       (hscroll (sideline--render-data :hscroll))
+       (offset (- 0 hscroll))
        ;; Truncate
        (title
         (or (and sideline-truncate
                  (let* ((win-width (sideline--render-data :win-width))
-                        (used-space (if on-left
-                                        (let ((col (save-excursion
-                                                     (goto-char pos-end)
-                                                     (current-column))))
-                                          (if (zerop col)
-                                              col  ; blank line
-                                            (- win-width col)))
-                                      (- pos-start occ-pt)))
-                        (available-space (- win-width used-space))
+                        (end-col (save-excursion
+                                   (goto-char pos-end)
+                                   (current-column)))
+                        (available-space (if on-left
+                                             (if (zerop end-col)
+                                                 win-width
+                                               (- end-col hscroll))
+                                           (- win-width (- end-col hscroll))))
                         (suffix (copy-sequence (truncate-string-ellipsis))))
                    (when (< available-space len-title)
                      (set-text-properties 0 (length suffix)
@@ -672,22 +673,27 @@ FACE, NAME, ON-LEFT, and ORDER for details."
             title))
        ;; Align left/right
        (str (concat
-             (unless on-left
-               (propertize " "
-                           'display `((space :align-to
-                                             (- right ,(sideline--align-right title offset)))
-                                      (space :width 0))
-                           `cursor t))
+             (propertize " "
+                         'display
+                         `((space :align-to
+                                  ,(if on-left
+                                       `(- left 0)
+                                     `(- right ,(sideline--align-right title offset))))
+                           (space :width 0))
+                         `cursor t)
              title)))
 
     ;; Create overlay
     (let* ((len-str (length str))
-           (empty-ln (= pos-start pos-end))
-           (ov (make-overlay pos-start (if empty-ln pos-start (+ pos-start len-str))
+           (left-empty-ln (= pos-start pos-end))
+           (ov (make-overlay pos-start
+                             (if left-empty-ln pos-start (min
+                                                          pos-end
+                                                          (+ pos-start len-str)))
                              nil t t)))
       (cond (on-left
-             (if empty-ln
-                 (overlay-put ov 'before-string str)
+             (if left-empty-ln
+                 (overlay-put ov 'before-string (concat (spaces-string hscroll) str))
                (overlay-put ov 'display str)
                (overlay-put ov 'invisible t)))
             (t (overlay-put ov 'before-string str)))
