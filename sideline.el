@@ -452,6 +452,7 @@ calculate to the right side."
     (cond
      (on-left
       (let* ((pos-first (save-excursion (back-to-indentation) (current-column)))
+             ;; The variable `pos-first' cannot be lower than the `hscroll'.
              (pos-first (max pos-first column-start))
              (remain-spaces (- pos-first column-start)))
         (cond ((<= str-len remain-spaces)
@@ -661,7 +662,7 @@ FACE, NAME, ON-LEFT, and ORDER for details."
                         (available-space (if on-left
                                              (if (zerop end-col)
                                                  win-width
-                                               (- end-col hscroll))
+                                               (- end-col hscroll 1))
                                            (- win-width (- end-col hscroll))))
                         (suffix (copy-sequence (truncate-string-ellipsis))))
                    (when (< available-space len-title)
@@ -673,23 +674,21 @@ FACE, NAME, ON-LEFT, and ORDER for details."
             title))
        ;; Align left/right
        (str (concat
-             (propertize " "
-                         'display
-                         `((space :align-to
-                                  ,(if on-left
-                                       `(- left 0)
-                                     `(- right ,(sideline--align-right title offset))))
-                           (space :width 0))
-                         `cursor t)
+             (unless on-left
+               (propertize " "
+                           'display
+                           `((space :align-to (- right ,(sideline--align-right title offset)))
+                             (space :width 0))
+                           `cursor t))
              title)))
 
     ;; Create overlay
     (let* ((len-str (length str))
            (left-empty-ln (= pos-start pos-end))
            (ov (make-overlay pos-start
-                             (if left-empty-ln pos-start (min
-                                                          pos-end
-                                                          (+ pos-start len-str)))
+                             (if left-empty-ln pos-start
+                               ;; Cannot exceed `pos-end'.
+                               (min pos-end (+ pos-start len-str)))
                              nil t t)))
       (cond (on-left
              (if left-empty-ln
