@@ -12,6 +12,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 * feat: Use built-in truncation symbols (#27)
 * feat: Find longest line before exceed display (63c913aeb5836f2376d1ad01580e67f9d1c56e0a)
 * fix: Rendering bug on window size change (7285ed46c3009f11c4dfecedca26670ff07464e2)
+* fix: Truncate display string on left as well (4fb40bd708f43802f23f3d1951ec290200668a1e)
 
 ## 0.2.0
 > Released Aug 24, 2024
