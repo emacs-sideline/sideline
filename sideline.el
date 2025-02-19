@@ -514,7 +514,8 @@ available lines in both directions (up & down)."
                                             (sideline--opposing-str-len)
                                             occ-bol)
                       ;; Handle exceed display.
-                      (when (and break-it
+                      (when (and exceeded  ; after search on both sides.
+                                 break-it  ; after reach edges.
                                  sideline--max-remain-spaces-line)
                         ;; Apply to BOL
                         (setq occ-bol (car sideline--max-remain-spaces-line))
@@ -523,8 +524,9 @@ available lines in both directions (up & down)."
                         (cdr sideline--max-remain-spaces-line))))
              (pos-start (sideline--column-to-point (car col)))
              (pos-end   (sideline--column-to-point (cdr col)))
-             ;; Skip virtual line from `truncate-lines'.
-             ((= pos-start pos-end)))
+             ((or on-left
+                  ;; Skip virtual line from `truncate-lines'.
+                  (= pos-start pos-end))))
           (setq data (list pos-start pos-end occ-bol))
           (setq break-it t)
           (push occ-bol occupied-lines))))
@@ -648,17 +650,26 @@ FACE, NAME, ON-LEFT, and ORDER for details."
        (pos-start (nth 0 data)) (pos-end (nth 1 data)) (occ-pt (nth 2 data))
        (offset (- 0 (sideline--render-data :hscroll)))
        ;; Truncate
-       (title (if sideline-truncate
-                  (let* ((win-width (sideline--render-data :win-width))
-                         (used-space (- pos-start occ-pt))
-                         (available-space (- win-width used-space))
-                         (suffix (copy-sequence (truncate-string-ellipsis))))
-                    (set-text-properties 0 (length suffix)
-                                         (text-properties-at (1- (length title)) title)
-                                         suffix)
-                    (truncate-string-to-width title available-space 0 nil
-                                              suffix))
-                title))
+       (title
+        (or (and sideline-truncate
+                 (let* ((win-width (sideline--render-data :win-width))
+                        (used-space (if on-left
+                                        (let ((col (save-excursion
+                                                     (goto-char pos-end)
+                                                     (current-column))))
+                                          (if (zerop col)
+                                              col  ; blank line
+                                            (- win-width col)))
+                                      (- pos-start occ-pt)))
+                        (available-space (- win-width used-space))
+                        (suffix (copy-sequence (truncate-string-ellipsis))))
+                   (when (< available-space len-title)
+                     (set-text-properties 0 (length suffix)
+                                          (text-properties-at (1- (length title)) title)
+                                          suffix)
+                     (truncate-string-to-width title available-space 0 nil
+                                               suffix))))
+            title))
        ;; Align left/right
        (str (concat
              (unless on-left
