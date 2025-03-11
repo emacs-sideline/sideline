@@ -230,13 +230,12 @@
 
 (declare-function shr-string-pixel-width "shr.el")  ; TODO: remove this after 29.1
 
-(defun sideline--enable-externals ()
+(defun sideline--handle-externals ()
   "Alter external packages to work with `sideline'."
-  (add-hook 'whitespace-mode-hook #'sideline-render-this nil t))
-
-(defun sideline--disable-externals ()
-  "Remove all handler atlered to work with `sideline'."
-  (remove-hook 'whitespace-mode-hook #'sideline-render-this t))
+  (add-hook 'whitespace-mode-hook #'sideline-render-this)
+  ;; Tree-sitter
+  (add-hook 'ts-fold-on-fold-hook #'sideline-render-this)
+  (add-hook 'treesit-fold-on-fold-hook #'sideline-render-this))
 
 ;;
 ;; (@* "Entry" )
@@ -255,7 +254,7 @@
         sideline--text-scale-mode-amount text-scale-mode-amount)
   (add-hook 'post-command-hook #'sideline--post-command -90 t)
   (add-hook 'before-revert-hook #'sideline--before-revert nil t)
-  (sideline--enable-externals)
+  (sideline--handle-externals)
   ;; Render immediately after reopened file!
   (sideline--post-command))
 
@@ -263,7 +262,6 @@
   "Disable `sideline' in current buffer."
   (remove-hook 'post-command-hook #'sideline--post-command t)
   (remove-hook 'before-revert-hook #'sideline--before-revert t)
-  (sideline--disable-externals)
   (sideline--reset))
 
 ;;;###autoload
