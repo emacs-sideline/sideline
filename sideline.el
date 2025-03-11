@@ -391,7 +391,12 @@ Argument OFFSET is additional calculation from the right alignment."
               (if graphic-p
                   ;; If right fringe deactivated add 1 offset
                   (if (= 0 (nth 1 fringes)) 1 0)
-                1)))))))
+                1)
+              (if (or
+                   (bound-and-true-p whitespace-mode)
+                   (bound-and-true-p global-whitespace-mode))
+                  1
+                0)))))))
 
 (defun sideline--line-pixel-start ()
   "Return the pixel start of the line."
