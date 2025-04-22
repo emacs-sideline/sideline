@@ -1,3 +1,5 @@
+;; -*- mode: eask; lexical-binding: t -*-
+
 (package "sideline"
          "0.2.0"
          "Show information on the side")
