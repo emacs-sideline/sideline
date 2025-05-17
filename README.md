@@ -21,7 +21,7 @@ left/right side of the buffer window.
   - [❓ Why?](#-why)
   - [🔨 Quickstart](#-quickstart)
     - [👥 Configure backends](#-configure-backends)
-  - [⚙ Performance](#-performance)
+  - [⚡ Performance](#-performance)
   - [📌 Define your own backend](#-define-your-own-backend)
   - [❓ FAQ](#-faq)
     - [💫 Why is sideline not being render?](#-why-is-sideline-not-being-render)
@@ -126,7 +126,7 @@ Alternatively, you could set it to cons cell with the search order.
 <img src="./etc/2.png" width="70%"/>
 </p>
 
-## ⚙ Performance
+## ⚡ Performance
 
 Starting `sideline` can sometimes be cumbersome because it
 loads all packages at once instead of using lazy loading.
