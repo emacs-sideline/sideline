@@ -148,6 +148,11 @@
   :type 'number
   :group 'sideline)
 
+(defcustom sideline-backend-delays nil
+  "Number of seconds to wait before showing sideline per backend."
+  :type '(list symbol)
+  :group 'sideline)
+
 (defcustom sideline-pre-render-hook nil
   "Hooks runs before rendering sidelines."
   :type 'hook
@@ -248,7 +253,8 @@
   ;; XXX: Still don't know why local variable doesn't work!
   (progn
     (sideline--delete-ovs)
-    (setq-local sideline--overlays (make-hash-table)))
+    (setq-local sideline--overlays (make-hash-table)
+                sideline--backend-delay-timers (make-hash-table)))
   (setq sideline--render-data-wapp (make-hash-table)
         sideline--ex-bound-or-point t  ; reset, render immediately
         sideline--text-scale-mode-amount text-scale-mode-amount)
@@ -753,14 +759,43 @@ Argument ORDER determined the search order for going up or down."
 ;; (@* "Core" )
 ;;
 
+(defvar-local sideline--backend-delay-timers nil
+  "Delay timer per backend.")
+
 (defun sideline--call-backend (backend command)
   "Return BACKEND's result with COMMAND."
   (funcall backend command))
 
+(defun sideline--render-backend (backend on-left order)
+  "Render for single BACKEND.
+
+All arguments BACKEND, ON-LEFT and ORDER are extracted from the function
+`sideline--render-backends'."
+  (when-let* ((candidates (sideline--call-backend backend 'candidates))
+              (buffer (current-buffer)))  ; for async check
+    (if (eq (car candidates) :async)
+        (funcall (cdr candidates)
+                 (lambda (cands &rest _)
+                   (sideline--with-buffer-window buffer
+                     (when sideline-mode
+                       ;; XXX: The bug occurs when you have two or more indentical
+                       ;; windows (same buffer and same cursor position) and
+                       ;; frequently change between different buffers.
+                       ;;
+                       ;; To solve this, just record the "real" rendering
+                       ;; buffer in async. So when you switch back to the same
+                       ;; buffer, the sideline can adjust to find the correct
+                       ;; buffer in the function `sideline--do-render-p' since
+                       ;; it has been flag here.
+                       (setq sideline--ex-window (selected-window))
+                       (sideline--render-candidates cands backend on-left order)))))
+      (sideline--render-candidates candidates backend on-left order))))
+
 (defun sideline--render-backends (backends on-left)
   "Render a list of BACKENDS.
 
-If argument ON-LEFT is non-nil, it will align to the left instead of right."
+If argument ON-LEFT is non-nil, it will align to the left
+instead of right."
   (dolist (data backends)
     (let ((is-cons (consp data)))
       (when-let* ((backend (if is-cons (car data) data))
@@ -768,26 +803,16 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
                              (eval backend)))
                   (order (if is-cons (cdr data)  ; configured
                            ;; fallback to default
-                           (if on-left sideline-order-left sideline-order-right)))
-                  (candidates (sideline--call-backend backend 'candidates))
-                  (buffer (current-buffer)))  ; for async check
-        (if (eq (car candidates) :async)
-            (funcall (cdr candidates)
-                     (lambda (cands &rest _)
-                       (sideline--with-buffer-window buffer
-                         (when sideline-mode
-                           ;; XXX: The bug occurs when you have two or more indentical
-                           ;; windows (same buffer and same cursor position) and
-                           ;; frequently change between different buffers.
-                           ;;
-                           ;; To solve this, just record the "real" rendering
-                           ;; buffer in async. So when you switch back to the same
-                           ;; buffer, the sideline can adjust to find the correct
-                           ;; buffer in the function `sideline--do-render-p' since
-                           ;; it has been flag here.
-                           (setq sideline--ex-window (selected-window))
-                           (sideline--render-candidates cands backend on-left order)))))
-          (sideline--render-candidates candidates backend on-left order))))))
+                           (if on-left sideline-order-left sideline-order-right))))
+        ;; Handle backend delay here.
+        (if-let* ((delay (alist-get backend sideline-backend-delays)))
+            (progn
+              (sideline--kill-timer (ht-get sideline--backend-delay-timers backend))
+              (ht-set sideline--backend-delay-timers
+                      backend
+                      (run-with-idle-timer delay nil #'sideline--render-backend
+                                           backend on-left order)))
+          (sideline--render-backend backend on-left order))))))
 
 (defun sideline-stop-p ()
   "Return non-nil if the sideline should not be display."
@@ -854,7 +879,7 @@ If argument ON-LEFT is non-nil, it will align to the left instead of right."
   (sideline--reset))
 
 (defvar-local sideline--delay-timer nil
-  "Timer for delay.")
+  "Delay timer to render sideline.")
 
 (defun sideline--post-command ()
   "Post command."
