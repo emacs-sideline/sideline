@@ -125,6 +125,39 @@ Alternatively, you could set it to cons cell with the search order.
 <img src="./etc/2.png" width="70%"/>
 </p>
 
+## ⚙ Performance
+
+Starting `sideline` can sometimes be cumbersome because it
+loads all packages at once instead of using lazy loading.
+Fortunately, `sideline` accepts a `form` instead of requiring
+a callable symbol for a backend. You can mitigate this by
+configuring your `sideline` backends like this:
+
+```elisp
+(setq sideline-backends-right `(((when (featurep 'lsp-mode)
+                                     'sideline-lsp)
+                                   . up)
+                                  ((when (featurep 'eglot)
+                                     'sideline-eglot)
+                                   . up))
+                                ...
+```
+
+`sideline` can sometimes hinder your overall experience due to
+the heavy rendering workload of certain backends. You can alleviate
+this by adding a small adjustment:
+
+```elisp
+(setq sideline-delay 0.2)
+```
+
+Alternatively, you can delay specific backends like this:
+
+```elisp
+(setq sideline-backend-delays '((sideline-blame . 2.0)
+                                ...
+```
+
 ## 📌 Define your own backend
 
 Following is an example code to define your own sideline backend:
