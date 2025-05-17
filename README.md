@@ -131,8 +131,8 @@ Alternatively, you could set it to cons cell with the search order.
 Starting `sideline` can sometimes be cumbersome because it
 loads all packages at once instead of using lazy loading.
 Fortunately, `sideline` accepts a `form` instead of requiring
-a callable symbol for a backend. You can mitigate this by
-configuring your `sideline` backends like this:
+a callable symbol for a backend. You can altogether avoid this
+by configuring your `sideline` backends like this:
 
 ```elisp
 (setq sideline-backends-right `(((when (featurep 'lsp-mode)
