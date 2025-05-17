@@ -21,6 +21,7 @@ left/right side of the buffer window.
   - [❓ Why?](#-why)
   - [🔨 Quickstart](#-quickstart)
     - [👥 Configure backends](#-configure-backends)
+  - [⚙ Performance](#-performance)
   - [📌 Define your own backend](#-define-your-own-backend)
   - [❓ FAQ](#-faq)
     - [💫 Why is sideline not being render?](#-why-is-sideline-not-being-render)
