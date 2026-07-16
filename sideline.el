@@ -6,7 +6,7 @@
 ;; Author: Shen, Jen-Chieh <jcs090218@gmail.com>
 ;; URL: https://github.com/emacs-sideline/sideline
 ;; Version: 0.2.0
-;; Package-Requires: ((emacs "28.1") (ht "2.4"))
+;; Package-Requires: ((emacs "28.1") (ht "2.3"))
 ;; Keywords: convenience
 
 ;; This file is NOT part of GNU Emacs.
